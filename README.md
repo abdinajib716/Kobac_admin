@@ -1,5 +1,7 @@
 # Modern Admin Dashboard
 
+**Version 1.0.0**
+
 A professional, production-ready admin dashboard built with Laravel 11, Filament 3, and modern UI/UX design.
 
 ## ✨ Features
