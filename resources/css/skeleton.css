@@ -1,0 +1,122 @@
+/* Skeleton Loading Animations */
+
+.skeleton-box {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+        90deg,
+        rgba(229, 231, 235, 0.2) 0%,
+        rgba(229, 231, 235, 0.4) 50%,
+        rgba(229, 231, 235, 0.2) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.dark .skeleton-box {
+    background: linear-gradient(
+        90deg,
+        rgba(55, 65, 81, 0.2) 0%,
+        rgba(55, 65, 81, 0.4) 50%,
+        rgba(55, 65, 81, 0.2) 100%
+    );
+    background-size: 200% 100%;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Pulse animation for containers */
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Shimmer effect */
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 2s infinite;
+}
+
+.dark .skeleton-shimmer::after {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.05) 20%,
+        rgba(255, 255, 255, 0.1) 60%,
+        rgba(255, 255, 255, 0)
+    );
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Loading overlay */
+.skeleton-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark .skeleton-overlay {
+    background-color: rgba(17, 24, 39, 0.8);
+}
+
+/* Fade transitions */
+.skeleton-fade-enter {
+    opacity: 0;
+}
+
+.skeleton-fade-enter-active {
+    opacity: 1;
+    transition: opacity 300ms ease-in;
+}
+
+.skeleton-fade-exit {
+    opacity: 1;
+}
+
+.skeleton-fade-exit-active {
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+}
