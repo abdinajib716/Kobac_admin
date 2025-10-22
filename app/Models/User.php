@@ -91,4 +91,19 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         $this->notify(new \App\Notifications\Auth\ResetPasswordNotification($token));
     }
+
+    /**
+     * Boot method to handle model events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Automatically set 'name' when creating or updating
+        static::saving(function ($user) {
+            if ($user->first_name && $user->last_name) {
+                $user->name = $user->first_name . ' ' . $user->last_name;
+            }
+        });
+    }
 }

@@ -29,7 +29,46 @@ class ActivityLogResource extends Resource
     {
         return $form
             ->schema([
-                //
+                Forms\Components\Section::make('Activity Details')
+                    ->schema([
+                        Forms\Components\TextInput::make('log_name')
+                            ->label('Type')
+                            ->disabled(),
+                        
+                        Forms\Components\TextInput::make('description')
+                            ->label('Activity')
+                            ->disabled(),
+                        
+                        Forms\Components\TextInput::make('subject_type')
+                            ->label('Subject Type')
+                            ->formatStateUsing(fn ($state) => $state ? class_basename($state) : 'N/A')
+                            ->disabled(),
+                        
+                        Forms\Components\TextInput::make('causer.name')
+                            ->label('Performed By')
+                            ->default('System')
+                            ->disabled(),
+                        
+                        Forms\Components\DateTimePicker::make('created_at')
+                            ->label('Date & Time')
+                            ->disabled(),
+                    ])
+                    ->columns(2),
+                
+                Forms\Components\Section::make('Changes')
+                    ->schema([
+                        Forms\Components\KeyValue::make('properties.attributes')
+                            ->label('New Values')
+                            ->disabled()
+                            ->visible(fn ($record) => $record && $record->properties && isset($record->properties['attributes'])),
+                        
+                        Forms\Components\KeyValue::make('properties.old')
+                            ->label('Old Values')
+                            ->disabled()
+                            ->visible(fn ($record) => $record && $record->properties && isset($record->properties['old'])),
+                    ])
+                    ->collapsed()
+                    ->visible(fn ($record) => $record && $record->properties),
             ]);
     }
 

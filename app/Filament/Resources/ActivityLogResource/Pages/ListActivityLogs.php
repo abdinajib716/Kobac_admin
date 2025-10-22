@@ -13,7 +13,12 @@ class ListActivityLogs extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            // No create action for activity log
         ];
+    }
+    
+    public function getView(): string
+    {
+        return 'filament.resources.activity-log-resource.pages.list-activity-logs';
     }
 }
