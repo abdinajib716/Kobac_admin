@@ -1,8 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "cajiib/admin-dashboard",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Modern Admin Dashboard - Production-ready admin panel built with Laravel 11 and Filament 3",
+    "version": "1.0.0",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
