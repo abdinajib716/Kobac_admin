@@ -23,6 +23,15 @@ class UserResource extends Resource
     protected static ?string $navigationGroup = 'Access Control';
     
     protected static ?int $navigationSort = 1;
+    
+    protected static ?string $navigationLabel = 'Admin Users';
+    
+    protected static ?string $modelLabel = 'Admin User';
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->where('user_type', 'client');
+    }
 
     public static function form(Form $form): Form
     {

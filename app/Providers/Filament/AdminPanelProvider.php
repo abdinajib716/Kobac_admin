@@ -44,6 +44,15 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            ->navigationGroups([
+                'Subscription Management',
+                'Payments',
+                'Notifications',
+                'Location Management',
+                'Business Data',
+                'Access Control',
+                'System',
+            ])
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
             ->defaultAvatarProvider(\Filament\AvatarProviders\UiAvatarsProvider::class)
@@ -54,6 +63,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->widgets([
                 \App\Filament\Widgets\StatsOverview::class,
+                \App\Filament\Widgets\FinancialSummaryWidget::class,
                 \App\Filament\Widgets\UsersChart::class,
                 \App\Filament\Widgets\ActivityChart::class,
             ])

@@ -1,0 +1,835 @@
+{
+	"info": {
+		"_postman_id": "8b4f2a1c-9d3e-4f5a-b6c7-d8e9f0a1b2c3",
+		"name": "Kobac Business API v1",
+		"description": "Business-only endpoints: Setup, Branches, Customers, Vendors, Stock, P&L. Requires business user login.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "9. Business Setup & Profile",
+			"item": [
+				{
+					"name": "Setup Business",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success) {",
+									"    if (r.data.business && r.data.business.id) {",
+									"        pm.environment.set('business_id', r.data.business.id);",
+									"    }",
+									"    if (r.data.branch && r.data.branch.id) {",
+									"        pm.environment.set('branch_id', r.data.branch.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"business\": {\n        \"name\": \"Ali Trading Co.\",\n        \"legal_name\": \"Ali Trading Company LLC\",\n        \"phone\": \"+252615123456\",\n        \"email\": \"info@alitrading.com\",\n        \"address\": \"123 Main Street, Mogadishu\",\n        \"currency\": \"USD\"\n    },\n    \"main_branch\": {\n        \"name\": \"Head Office\",\n        \"code\": \"HQ\",\n        \"address\": \"123 Main Street, Mogadishu\"\n    },\n    \"initial_accounts\": [\n        {\n            \"name\": \"Cash\",\n            \"type\": \"cash\",\n            \"initial_balance\": 1000\n        },\n        {\n            \"name\": \"EVC Plus\",\n            \"type\": \"mobile_money\",\n            \"provider\": \"Hormuud\",\n            \"initial_balance\": 500\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/setup",
+							"host": ["{{base_url}}"],
+							"path": ["business", "setup"]
+						},
+						"description": "First-time business setup. Creates business profile, main branch, and optional initial accounts."
+					}
+				},
+				{
+					"name": "Get Business Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/profile",
+							"host": ["{{base_url}}"],
+							"path": ["business", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Business Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Ali Trading Updated\",\n    \"phone\": \"+252615999888\",\n    \"address\": \"456 New Street, Mogadishu\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/profile",
+							"host": ["{{base_url}}"],
+							"path": ["business", "profile"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "10. Branches",
+			"item": [
+				{
+					"name": "List Branches",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.length > 0) {",
+									"    pm.environment.set('branch_id', r.data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/branches?active_only=true",
+							"host": ["{{base_url}}"],
+							"path": ["business", "branches"],
+							"query": [
+								{
+									"key": "active_only",
+									"value": "true"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Branch",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.id) {",
+									"    pm.environment.set('branch_id', r.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Downtown Branch\",\n    \"code\": \"DT01\",\n    \"address\": \"456 Downtown St, Mogadishu\",\n    \"phone\": \"+252615222333\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/branches",
+							"host": ["{{base_url}}"],
+							"path": ["business", "branches"]
+						}
+					}
+				},
+				{
+					"name": "Get Branch",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/branches/{{branch_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["business", "branches", "{{branch_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Branch",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Downtown Branch Updated\",\n    \"address\": \"789 New Downtown St\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/branches/{{branch_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["business", "branches", "{{branch_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Branch",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/branches/{{branch_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["business", "branches", "{{branch_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "11. Customers (Receivables)",
+			"item": [
+				{
+					"name": "List Customers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.length > 0) {",
+									"    pm.environment.set('customer_id', r.data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/customers?active_only=true&per_page=20",
+							"host": ["{{base_url}}"],
+							"path": ["business", "customers"],
+							"query": [
+								{
+									"key": "active_only",
+									"value": "true"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Customer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.id) {",
+									"    pm.environment.set('customer_id', r.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Ahmed Ali\",\n    \"phone\": \"+252615999888\",\n    \"email\": \"ahmed@example.com\",\n    \"address\": \"123 Customer St\",\n    \"notes\": \"Regular customer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/customers",
+							"host": ["{{base_url}}"],
+							"path": ["business", "customers"]
+						}
+					}
+				},
+				{
+					"name": "Get Customer",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/customers/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["business", "customers", "{{customer_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Debit Customer (Owes Us)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 100.00,\n    \"description\": \"Goods sold on credit\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/customers/{{customer_id}}/debit",
+							"host": ["{{base_url}}"],
+							"path": ["business", "customers", "{{customer_id}}", "debit"]
+						}
+					}
+				},
+				{
+					"name": "Credit Customer (Paid Us)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 50.00,\n    \"description\": \"Cash payment received\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/customers/{{customer_id}}/credit",
+							"host": ["{{base_url}}"],
+							"path": ["business", "customers", "{{customer_id}}", "credit"]
+						}
+					}
+				},
+				{
+					"name": "Customer Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/customers/{{customer_id}}/transactions?from=2026-01-01&to=2026-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["business", "customers", "{{customer_id}}", "transactions"],
+							"query": [
+								{
+									"key": "from",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "to",
+									"value": "2026-12-31"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Receivables Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/receivables/summary",
+							"host": ["{{base_url}}"],
+							"path": ["business", "receivables", "summary"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "12. Vendors (Payables)",
+			"item": [
+				{
+					"name": "List Vendors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.length > 0) {",
+									"    pm.environment.set('vendor_id', r.data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/vendors?active_only=true&per_page=20",
+							"host": ["{{base_url}}"],
+							"path": ["business", "vendors"],
+							"query": [
+								{
+									"key": "active_only",
+									"value": "true"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Vendor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.id) {",
+									"    pm.environment.set('vendor_id', r.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"XYZ Suppliers\",\n    \"phone\": \"+252615777888\",\n    \"email\": \"vendor@example.com\",\n    \"address\": \"123 Vendor St\",\n    \"notes\": \"Main supplier\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/vendors",
+							"host": ["{{base_url}}"],
+							"path": ["business", "vendors"]
+						}
+					}
+				},
+				{
+					"name": "Credit Vendor (We Owe)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 500.00,\n    \"description\": \"Goods received on credit\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/vendors/{{vendor_id}}/credit",
+							"host": ["{{base_url}}"],
+							"path": ["business", "vendors", "{{vendor_id}}", "credit"]
+						}
+					}
+				},
+				{
+					"name": "Debit Vendor (We Paid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 200.00,\n    \"description\": \"Partial payment made\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/vendors/{{vendor_id}}/debit",
+							"host": ["{{base_url}}"],
+							"path": ["business", "vendors", "{{vendor_id}}", "debit"]
+						}
+					}
+				},
+				{
+					"name": "Payables Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/payables/summary",
+							"host": ["{{base_url}}"],
+							"path": ["business", "payables", "summary"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "13. Stock (Inventory)",
+			"item": [
+				{
+					"name": "List Stock Items",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.length > 0) {",
+									"    pm.environment.set('stock_id', r.data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/stock?active_only=true&per_page=20",
+							"host": ["{{base_url}}"],
+							"path": ["business", "stock"],
+							"query": [
+								{
+									"key": "active_only",
+									"value": "true"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Stock Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var r = pm.response.json();",
+									"if (r.success && r.data && r.data.id) {",
+									"    pm.environment.set('stock_id', r.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Basmati Rice 25kg\",\n    \"sku\": \"RICE-BAS-25\",\n    \"description\": \"Premium basmati rice\",\n    \"quantity\": 50,\n    \"unit\": \"bags\",\n    \"cost_price\": 18.00,\n    \"selling_price\": 22.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/stock",
+							"host": ["{{base_url}}"],
+							"path": ["business", "stock"]
+						}
+					}
+				},
+				{
+					"name": "Increase Stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quantity\": 20,\n    \"reason\": \"New shipment arrived\",\n    \"reference\": \"PO-2026-001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/stock/{{stock_id}}/increase",
+							"host": ["{{base_url}}"],
+							"path": ["business", "stock", "{{stock_id}}", "increase"]
+						}
+					}
+				},
+				{
+					"name": "Decrease Stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quantity\": 10,\n    \"reason\": \"Sold to customer\",\n    \"reference\": \"INV-2026-001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/business/stock/{{stock_id}}/decrease",
+							"host": ["{{base_url}}"],
+							"path": ["business", "stock", "{{stock_id}}", "decrease"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "14. Profit & Loss",
+			"item": [
+				{
+					"name": "P&L Report",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Branch-Id",
+								"value": "{{branch_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/business/profit-loss?from=2026-01-01&to=2026-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["business", "profit-loss"],
+							"query": [
+								{
+									"key": "from",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "to",
+									"value": "2026-12-31"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

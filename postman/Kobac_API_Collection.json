@@ -1,0 +1,97 @@
+{
+"info": {
+"_postman_id": "kobac-api-v1",
+"name": "Kobac Mobile API v1",
+"description": "Complete API collection with 73 endpoints. Token auto-saved on login/register.",
+"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+},
+"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+"item": [
+{
+"name": "1. Authentication",
+"item": [
+{"name": "Register Individual", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.token){pm.environment.set('token',r.data.token);pm.environment.set('user_id',r.data.user.id);pm.environment.set('user_type',r.data.user.user_type);}"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"user_type\":\"individual\",\"name\":\"Ahmed Mohamed\",\"email\":\"ahmed@example.com\",\"phone\":\"+252615123456\",\"password\":\"password123\",\"password_confirmation\":\"password123\"}"}, "url": {"raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"]}}},
+{"name": "Register Business", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.token){pm.environment.set('token',r.data.token);pm.environment.set('user_id',r.data.user.id);pm.environment.set('user_type',r.data.user.user_type);}"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"user_type\":\"business\",\"name\":\"Mohamed Ali\",\"email\":\"business@example.com\",\"phone\":\"+252615987654\",\"password\":\"password123\",\"password_confirmation\":\"password123\",\"business_name\":\"Ali Trading Co.\",\"business_type\":\"retail\",\"plan_id\":1}"}, "url": {"raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"]}}},
+{"name": "Login", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.token){pm.environment.set('token',r.data.token);pm.environment.set('user_id',r.data.user.id);pm.environment.set('user_type',r.data.user.user_type);if(r.data.user.business)pm.environment.set('business_id',r.data.user.business.id);}"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"email\":\"ahmed@example.com\",\"password\":\"password123\"}"}, "url": {"raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"]}}},
+{"name": "Get Current User", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"]}}},
+{"name": "Logout", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success)pm.environment.set('token','');"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"]}}}
+]
+},
+{
+"name": "2. Profile",
+"item": [
+{"name": "Update Profile", "request": {"method": "PUT", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"name\":\"Ahmed Mohamed Updated\",\"phone\":\"+252615111222\"}"}, "url": {"raw": "{{base_url}}/profile", "host": ["{{base_url}}"], "path": ["profile"]}}}
+]
+},
+{
+"name": "3. Dashboard",
+"item": [
+{"name": "Dashboard (Individual)", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/dashboard", "host": ["{{base_url}}"], "path": ["dashboard"]}}},
+{"name": "Dashboard (Business)", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/business/dashboard", "host": ["{{base_url}}"], "path": ["business", "dashboard"]}}}
+]
+},
+{
+"name": "4. Accounts",
+"item": [
+{"name": "List Accounts", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.length>0)pm.environment.set('account_id',r.data[0].id);"]}}], "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/accounts", "host": ["{{base_url}}"], "path": ["accounts"]}}},
+{"name": "Create Account", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.id)pm.environment.set('account_id',r.data.id);"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"name\":\"Cash Wallet\",\"type\":\"cash\",\"currency\":\"USD\",\"initial_balance\":1000.00,\"description\":\"Main cash\"}"}, "url": {"raw": "{{base_url}}/accounts", "host": ["{{base_url}}"], "path": ["accounts"]}}},
+{"name": "Get Account", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/accounts/{{account_id}}", "host": ["{{base_url}}"], "path": ["accounts", "{{account_id}}"]}}},
+{"name": "Update Account", "request": {"method": "PUT", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"name\":\"Updated Wallet\",\"description\":\"Updated\"}"}, "url": {"raw": "{{base_url}}/accounts/{{account_id}}", "host": ["{{base_url}}"], "path": ["accounts", "{{account_id}}"]}}},
+{"name": "Delete Account", "request": {"method": "DELETE", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/accounts/{{account_id}}", "host": ["{{base_url}}"], "path": ["accounts", "{{account_id}}"]}}},
+{"name": "Deactivate Account", "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/accounts/{{account_id}}/deactivate", "host": ["{{base_url}}"], "path": ["accounts", "{{account_id}}", "deactivate"]}}},
+{"name": "Activate Account", "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/accounts/{{account_id}}/activate", "host": ["{{base_url}}"], "path": ["accounts", "{{account_id}}", "activate"]}}},
+{"name": "Account Ledger", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/accounts/{{account_id}}/ledger?from=2026-01-01&to=2026-12-31&per_page=50", "host": ["{{base_url}}"], "path": ["accounts", "{{account_id}}", "ledger"], "query": [{"key": "from", "value": "2026-01-01"}, {"key": "to", "value": "2026-12-31"}, {"key": "per_page", "value": "50"}]}}}
+]
+},
+{
+"name": "5. Income",
+"item": [
+{"name": "List Income", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.length>0)pm.environment.set('income_id',r.data[0].id);"]}}], "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/income?from=2026-01-01&to=2026-12-31&per_page=20", "host": ["{{base_url}}"], "path": ["income"], "query": [{"key": "from", "value": "2026-01-01"}, {"key": "to", "value": "2026-12-31"}, {"key": "per_page", "value": "20"}]}}},
+{"name": "Create Income", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.id)pm.environment.set('income_id',r.data.id);"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"account_id\":\"{{account_id}}\",\"amount\":500.00,\"category\":\"salary\",\"description\":\"Monthly salary\",\"transaction_date\":\"2026-01-03\"}"}, "url": {"raw": "{{base_url}}/income", "host": ["{{base_url}}"], "path": ["income"]}}},
+{"name": "Get Income", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/income/{{income_id}}", "host": ["{{base_url}}"], "path": ["income", "{{income_id}}"]}}},
+{"name": "Update Income", "request": {"method": "PUT", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"amount\":550.00,\"description\":\"Updated\"}"}, "url": {"raw": "{{base_url}}/income/{{income_id}}", "host": ["{{base_url}}"], "path": ["income", "{{income_id}}"]}}},
+{"name": "Delete Income", "request": {"method": "DELETE", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/income/{{income_id}}", "host": ["{{base_url}}"], "path": ["income", "{{income_id}}"]}}}
+]
+},
+{
+"name": "6. Expenses",
+"item": [
+{"name": "List Expenses", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.length>0)pm.environment.set('expense_id',r.data[0].id);"]}}], "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/expenses?from=2026-01-01&to=2026-12-31&per_page=20", "host": ["{{base_url}}"], "path": ["expenses"], "query": [{"key": "from", "value": "2026-01-01"}, {"key": "to", "value": "2026-12-31"}, {"key": "per_page", "value": "20"}]}}},
+{"name": "Create Expense", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.data.id)pm.environment.set('expense_id',r.data.id);"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"account_id\":\"{{account_id}}\",\"amount\":50.00,\"category\":\"food\",\"description\":\"Groceries\",\"transaction_date\":\"2026-01-03\"}"}, "url": {"raw": "{{base_url}}/expenses", "host": ["{{base_url}}"], "path": ["expenses"]}}},
+{"name": "Get Expense", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/expenses/{{expense_id}}", "host": ["{{base_url}}"], "path": ["expenses", "{{expense_id}}"]}}},
+{"name": "Update Expense", "request": {"method": "PUT", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"amount\":55.00,\"description\":\"Updated\"}"}, "url": {"raw": "{{base_url}}/expenses/{{expense_id}}", "host": ["{{base_url}}"], "path": ["expenses", "{{expense_id}}"]}}},
+{"name": "Delete Expense", "request": {"method": "DELETE", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/expenses/{{expense_id}}", "host": ["{{base_url}}"], "path": ["expenses", "{{expense_id}}"]}}}
+]
+},
+{
+"name": "7. Subscription & Plans",
+"item": [
+{"name": "List Plans", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/plans", "host": ["{{base_url}}"], "path": ["plans"]}}},
+{"name": "Subscription Status", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/subscription/status", "host": ["{{base_url}}"], "path": ["subscription", "status"]}}},
+{"name": "Subscription Details", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/subscription", "host": ["{{base_url}}"], "path": ["subscription"]}}},
+{"name": "Upgrade Options", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/subscription/upgrade-options", "host": ["{{base_url}}"], "path": ["subscription", "upgrade-options"]}}}
+]
+},
+{
+"name": "8. Activity & Search",
+"item": [
+{"name": "Activity Timeline", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/activity?per_page=20", "host": ["{{base_url}}"], "path": ["activity"], "query": [{"key": "per_page", "value": "20"}]}}},
+{"name": "Global Search", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/search?q=ahmed&limit=5", "host": ["{{base_url}}"], "path": ["search"], "query": [{"key": "q", "value": "ahmed"}, {"key": "limit", "value": "5"}]}}},
+{"name": "App Features", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/apps", "host": ["{{base_url}}"], "path": ["apps"]}}}
+]
+},
+{
+"name": "9. Payments",
+"description": "Payment methods including WaafiPay (online) and Offline payment options",
+"item": [
+{"name": "Get Payment Methods", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/payment/methods", "host": ["{{base_url}}"], "path": ["payment", "methods"]}}, "description": "Returns available payment methods: Online (WaafiPay) and/or Offline based on settings"},
+{"name": "Initiate WaafiPay Payment", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.reference_id)pm.environment.set('payment_reference',r.reference_id);"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"phone_number\":\"615123456\",\"amount\":9.99,\"wallet_type\":\"evc_plus\",\"description\":\"Subscription payment\"}"}, "url": {"raw": "{{base_url}}/payment/initiate", "host": ["{{base_url}}"], "path": ["payment", "initiate"]}}},
+{"name": "Check WaafiPay Status", "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"reference_id\":\"{{payment_reference}}\"}"}, "url": {"raw": "{{base_url}}/payment/status", "host": ["{{base_url}}"], "path": ["payment", "status"]}}},
+{"name": "Payment History", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/payment/history", "host": ["{{base_url}}"], "path": ["payment", "history"]}}},
+{"name": "Initiate Offline Payment", "event": [{"listen": "test", "script": {"exec": ["var r=pm.response.json();if(r.success&&r.reference_id)pm.environment.set('offline_payment_reference',r.reference_id);"]}}], "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"plan_id\":1,\"proof_of_payment\":\"Bank transfer receipt #12345\"}"}, "url": {"raw": "{{base_url}}/payment/offline", "host": ["{{base_url}}"], "path": ["payment", "offline"]}}, "description": "Request offline payment for subscription. Requires admin approval."},
+{"name": "Check Offline Payment Status", "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"reference_id\":\"{{offline_payment_reference}}\"}"}, "url": {"raw": "{{base_url}}/payment/offline/status", "host": ["{{base_url}}"], "path": ["payment", "offline", "status"]}}},
+{"name": "Get Offline Payment Instructions", "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": {"raw": "{{base_url}}/payment/offline/instructions", "host": ["{{base_url}}"], "path": ["payment", "offline", "instructions"]}}, "description": "Get bank/payment instructions for offline payment"}
+]
+}
+]
+}

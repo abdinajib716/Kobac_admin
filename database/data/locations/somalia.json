@@ -1,0 +1,154 @@
+{
+    "country": {
+        "name": "Somalia",
+        "code": "SOM",
+        "code_alpha2": "SO",
+        "phone_code": "+252",
+        "currency": "SOS",
+        "flag": "🇸🇴"
+    },
+    "regions": {
+        "Awdal": [
+            "Baki",
+            "Boorame",
+            "Lughaya",
+            "Zaylac"
+        ],
+        "Banaadir": [
+            "Cabdi Casiis",
+            "Boondheere",
+            "Xamar Jajab",
+            "Xamar Weyne",
+            "Hawl Wadaag",
+            "Huriwaa",
+            "Hodan",
+            "Kaaraan",
+            "Shangaani",
+            "Shibis",
+            "Waaberi",
+            "Wadajir",
+            "Wardhiigley",
+            "Yaaqshiid",
+            "Dharkeynley"
+        ],
+        "Bari": [
+            "Boosaaso",
+            "Caluula",
+            "Banderbeyla",
+            "Rako",
+            "Ufayn",
+            "Waaciya",
+            "Qandala",
+            "Qardho",
+            "Xaafuun",
+            "Iskushuban"
+        ],
+        "Togdheer": [
+            "Burco",
+            "Buuhoodle",
+            "Shiikh",
+            "Oodweyne"
+        ],
+        "Sool": [
+            "Laas Caanood",
+            "Caynabo",
+            "Xudun",
+            "Taleex"
+        ],
+        "Galguduud": [
+            "Dhuusamareeb",
+            "Cadaado",
+            "Alad",
+            "Balanbale",
+            "Ceelbuur",
+            "Ceeldheere",
+            "Caabudwaaq",
+            "Gelhareeri"
+        ],
+        "Hiiraan": [
+            "Baladweyne",
+            "Buula Barde",
+            "Jalalaqsi",
+            "Masax",
+            "Matabaan"
+        ],
+        "Gedo": [
+            "Garbahaarey",
+            "Baardheere",
+            "Beledxaawo",
+            "Doolow",
+            "Ceelwaaq",
+            "Luuq"
+        ],
+        "Waqooyi Galbeed": [
+            "Hargeysa",
+            "Dacarbudhuq",
+            "Berbera",
+            "Gebilay"
+        ],
+        "Mudug": [
+            "Gaalkacyo",
+            "Galdogob",
+            "Xarardheere",
+            "Hobyo",
+            "Jiriiban"
+        ],
+        "Shabeelada Dhexe": [
+            "Jawhar",
+            "Balcad",
+            "Mahadaay",
+            "Cadale",
+            "Aadan Yabaal",
+            "Warshiikh",
+            "Runirgood"
+        ],
+        "Shabeelada Hoose": [
+            "Marka",
+            "Afgooye",
+            "Aw-dhiigle",
+            "Baraawe",
+            "Kuntiwaarey",
+            "Qoryooley",
+            "Sablaale"
+        ],
+        "Bay": [
+            "Baydhabo",
+            "Buurxakabo",
+            "Diinsoor",
+            "Qansaxdheere",
+            "Bardaale"
+        ],
+        "Bakool": [
+            "Xudur",
+            "Ceelbarde",
+            "Rabdhure",
+            "Tiyeglow",
+            "Biyooley"
+        ],
+        "Jubada Dhexe": [
+            "Bu'aale",
+            "Dujuma",
+            "Jilib",
+            "Saakow"
+        ],
+        "Sanaag": [
+            "Ceerigaabo",
+            "Ceelafweyn",
+            "Laasqoray",
+            "Badhan"
+        ],
+        "Jubada Hoose": [
+            "Kismaayo",
+            "Afmadow",
+            "Badhaadhe",
+            "Xagar",
+            "Jamaame"
+        ],
+        "Nugaal": [
+            "Garoowe",
+            "Dangorayo",
+            "Ayl",
+            "Burtinle"
+        ]
+    }
+}

@@ -10,7 +10,11 @@ class Setting extends Model
     
     public static function get($key, $default = null)
     {
-        $setting = static::where('key', $key)->first();
+        try {
+            $setting = static::where('key', $key)->first();
+        } catch (\Exception $e) {
+            return $default;
+        }
         
         if (!$setting) {
             return $default;
@@ -18,6 +22,9 @@ class Setting extends Model
         
         // Try to decode JSON values
         $value = $setting->value;
+        if ($value === null) {
+            return $default;
+        }
         $decoded = json_decode($value, true);
         
         // Return decoded value if it was valid JSON, otherwise return original value

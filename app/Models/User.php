@@ -9,6 +9,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
@@ -16,7 +17,7 @@ use Spatie\Activitylog\LogOptions;
 class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, LogsActivity;
+    use HasFactory, Notifiable, HasApiTokens, HasRoles, LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -31,7 +32,16 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'display_name',
         'avatar',
         'email',
+        'phone',
+        'country_id',
+        'region_id',
+        'district_id',
+        'address',
         'password',
+        'user_type',
+        'is_active',
+        'deactivated_at',
+        'deactivated_by',
     ];
 
     /**
@@ -54,7 +64,157 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
+    }
+
+    const TYPE_CLIENT = 'client';
+    const TYPE_INDIVIDUAL = 'individual';
+    const TYPE_BUSINESS = 'business';
+
+    public function subscription(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Subscription::class)->latest();
+    }
+
+    public function business(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Business::class);
+    }
+
+     public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function region(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    public function district(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(District::class);
+    }
+
+    public function getLocationAttribute(): ?string
+    {
+        $parts = array_filter([
+            $this->district?->name,
+            $this->region?->name,
+            $this->country?->name,
+        ]);
+        
+        return !empty($parts) ? implode(', ', $parts) : null;
+    }
+
+    public function accounts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Account::class);
+    }
+
+    public function incomeTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(IncomeTransaction::class);
+    }
+
+    public function expenseTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ExpenseTransaction::class);
+    }
+
+    public function deviceTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    public function activeDeviceTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DeviceToken::class)->where('is_active', true);
+    }
+
+    public function isIndividual(): bool
+    {
+        return $this->user_type === self::TYPE_INDIVIDUAL;
+    }
+
+    public function isBusiness(): bool
+    {
+        return $this->user_type === self::TYPE_BUSINESS;
+    }
+
+    public function isClient(): bool
+    {
+        return $this->user_type === self::TYPE_CLIENT;
+    }
+
+    public function isMobileUser(): bool
+    {
+        return $this->isIndividual() || $this->isBusiness();
+    }
+
+    public function canWrite(): bool
+    {
+        if (!$this->is_active) {
+            return false;
+        }
+
+        if ($this->isIndividual()) {
+            return true;
+        }
+
+        if ($this->isBusiness() && $this->subscription) {
+            return $this->subscription->canWrite();
+        }
+
+        return $this->isClient();
+    }
+
+    public function canRead(): bool
+    {
+        return $this->is_active;
+    }
+
+    public function deactivate($deactivatedBy = null, ?string $reason = null): void
+    {
+        $this->update([
+            'is_active' => false,
+            'deactivated_at' => now(),
+            'deactivated_by' => $deactivatedBy,
+        ]);
+
+        // Send deactivation email
+        \App\Services\NotificationService::sendAccountDeactivated($this, $reason);
+    }
+
+    public function activate(): void
+    {
+        $this->update([
+            'is_active' => true,
+            'deactivated_at' => null,
+            'deactivated_by' => null,
+        ]);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeMobileUsers($query)
+    {
+        return $query->whereIn('user_type', [self::TYPE_INDIVIDUAL, self::TYPE_BUSINESS]);
+    }
+
+    public function scopeIndividuals($query)
+    {
+        return $query->where('user_type', self::TYPE_INDIVIDUAL);
+    }
+
+    public function scopeBusinessUsers($query)
+    {
+        return $query->where('user_type', self::TYPE_BUSINESS);
     }
 
     /**
@@ -78,10 +238,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
 
     /**
      * Determine if user can access the Filament panel
+     * Only 'client' (admin) users can access the admin panel
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return true; // Or add your own logic here
+        return $this->isClient() && $this->is_active;
     }
 
     /**
@@ -89,7 +250,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
      */
     public function sendPasswordResetNotification($token)
     {
-        $this->notify(new \App\Notifications\Auth\ResetPasswordNotification($token));
+        \App\Services\NotificationService::sendPasswordReset($this, $token);
     }
 
     /**

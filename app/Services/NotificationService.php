@@ -2,13 +2,26 @@
 
 namespace App\Services;
 
+use App\Mail\AccountDeactivatedMail;
+use App\Mail\OfflinePaymentApprovedMail;
+use App\Mail\OfflinePaymentRejectedMail;
+use App\Mail\OfflinePaymentSubmittedMail;
+use App\Mail\PasswordResetMail;
+use App\Mail\PaymentFailedMail;
+use App\Mail\SubscriptionActivatedMail;
+use App\Mail\SubscriptionExpiredMail;
+use App\Mail\TrialExpiredMail;
+use App\Mail\TrialExpiringMail;
 use App\Models\User;
 use App\Notifications\SystemAlertNotification;
 use App\Notifications\WelcomeNotification;
 use App\Notifications\WelcomeEmailNotification;
 use App\Notifications\PasswordResetEmailNotification;
+use App\Services\FirebaseNotificationService;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
@@ -86,6 +99,247 @@ class NotificationService
             'info' => $notification->info(),
             default => $notification->info(),
         };
+    }
+
+    // ─── Email Methods (Centralized Template) ──────────────
+
+    /**
+     * Send password reset email using branded template
+     */
+    public static function sendPasswordReset(User $user, string $token): void
+    {
+        try {
+            $resetUrl = url(route('filament.admin.auth.password-reset.reset', [
+                'token' => $token,
+                'email' => $user->getEmailForPasswordReset(),
+            ], false));
+
+            Mail::to($user->email)->send(new PasswordResetMail(
+                user: $user,
+                resetUrl: $resetUrl,
+                expireMinutes: config('auth.passwords.users.expire', 60),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send password reset email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send account deactivation email
+     */
+    public static function sendAccountDeactivated(User $user, ?string $reason = null): void
+    {
+        try {
+            Mail::to($user->email)->send(new AccountDeactivatedMail(
+                user: $user,
+                reason: $reason,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send deactivation email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send trial expiring warning email
+     */
+    public static function sendTrialExpiring(User $user): void
+    {
+        try {
+            $subscription = $user->subscription;
+            if (!$subscription || !$subscription->isOnTrial()) return;
+
+            $plan = $subscription->plan;
+            Mail::to($user->email)->send(new TrialExpiringMail(
+                user: $user,
+                planName: $plan?->name ?? 'Business',
+                trialEndsAt: $subscription->trial_ends_at->format('M d, Y'),
+                daysRemaining: $subscription->days_remaining,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send trial expiring email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send trial expired email
+     */
+    public static function sendTrialExpired(User $user): void
+    {
+        try {
+            $subscription = $user->subscription;
+            $plan = $subscription?->plan;
+
+            Mail::to($user->email)->send(new TrialExpiredMail(
+                user: $user,
+                planName: $plan?->name ?? 'Business',
+                trialEndedAt: $subscription?->trial_ends_at?->format('M d, Y') ?? now()->format('M d, Y'),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send trial expired email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send subscription activated email
+     */
+    public static function sendSubscriptionActivated(User $user, $subscription = null): void
+    {
+        try {
+            $subscription = $subscription ?? $user->subscription;
+            if (!$subscription) return;
+
+            $plan = $subscription->plan;
+            Mail::to($user->email)->send(new SubscriptionActivatedMail(
+                user: $user,
+                planName: $plan?->name ?? 'Business',
+                startsAt: $subscription->starts_at?->format('M d, Y') ?? now()->format('M d, Y'),
+                endsAt: $subscription->ends_at?->format('M d, Y') ?? 'N/A',
+                paymentMethod: ucfirst($subscription->payment_method ?? 'N/A'),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send subscription activated email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send subscription expired email
+     */
+    public static function sendSubscriptionExpired(User $user): void
+    {
+        try {
+            $subscription = $user->subscription;
+            $plan = $subscription?->plan;
+
+            Mail::to($user->email)->send(new SubscriptionExpiredMail(
+                user: $user,
+                planName: $plan?->name ?? 'Business',
+                expiredAt: $subscription?->ends_at?->format('M d, Y') ?? now()->format('M d, Y'),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send subscription expired email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send payment failed email
+     */
+    public static function sendPaymentFailed(User $user, array $paymentData): void
+    {
+        try {
+            Mail::to($user->email)->send(new PaymentFailedMail(
+                user: $user,
+                planName: $paymentData['plan_name'] ?? 'Unknown',
+                amount: (float) ($paymentData['amount'] ?? 0),
+                currency: $paymentData['currency'] ?? 'USD',
+                paymentMethod: $paymentData['payment_method'] ?? 'Unknown',
+                referenceId: $paymentData['reference_id'] ?? 'N/A',
+                errorMessage: $paymentData['error_message'] ?? null,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send payment failed email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send offline payment submitted email
+     */
+    public static function sendOfflinePaymentSubmitted(User $user, array $paymentData): void
+    {
+        try {
+            Mail::to($user->email)->send(new OfflinePaymentSubmittedMail(
+                user: $user,
+                planName: $paymentData['plan_name'] ?? 'Unknown',
+                amount: (float) ($paymentData['amount'] ?? 0),
+                currency: $paymentData['currency'] ?? 'USD',
+                referenceId: $paymentData['reference_id'] ?? 'N/A',
+                submittedAt: $paymentData['submitted_at'] ?? now()->format('M d, Y h:i A'),
+                instructions: $paymentData['instructions'] ?? null,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send offline payment submitted email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send offline payment approved email
+     */
+    public static function sendOfflinePaymentApproved(User $user, array $paymentData): void
+    {
+        try {
+            Mail::to($user->email)->send(new OfflinePaymentApprovedMail(
+                user: $user,
+                planName: $paymentData['plan_name'] ?? 'Unknown',
+                amount: (float) ($paymentData['amount'] ?? 0),
+                currency: $paymentData['currency'] ?? 'USD',
+                referenceId: $paymentData['reference_id'] ?? 'N/A',
+                approvedAt: $paymentData['approved_at'] ?? now()->format('M d, Y h:i A'),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send offline payment approved email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send offline payment rejected email
+     */
+    public static function sendOfflinePaymentRejected(User $user, array $paymentData): void
+    {
+        try {
+            Mail::to($user->email)->send(new OfflinePaymentRejectedMail(
+                user: $user,
+                planName: $paymentData['plan_name'] ?? 'Unknown',
+                amount: (float) ($paymentData['amount'] ?? 0),
+                currency: $paymentData['currency'] ?? 'USD',
+                referenceId: $paymentData['reference_id'] ?? 'N/A',
+                reason: $paymentData['reason'] ?? null,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send offline payment rejected email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    // ─── Push Notification Methods ───────────────────────────
+
+    /**
+     * Send push notification to a single user
+     */
+    public static function sendPushToUser(User $user, string $title, string $body, array $data = []): array
+    {
+        $firebase = app(FirebaseNotificationService::class);
+
+        if (!$firebase->isEnabled()) {
+            return ['success' => false, 'error' => 'Firebase is disabled'];
+        }
+
+        return $firebase->sendToUser($user, $title, $body, $data);
+    }
+
+    /**
+     * Send push notification to a collection of users
+     */
+    public static function sendPushToUsers(Collection $users, string $title, string $body, array $data = []): array
+    {
+        $firebase = app(FirebaseNotificationService::class);
+
+        if (!$firebase->isEnabled()) {
+            return ['success' => false, 'error' => 'Firebase is disabled'];
+        }
+
+        return $firebase->sendToUsers($users, $title, $body, $data);
+    }
+
+    /**
+     * Send push notification to a topic
+     */
+    public static function sendPushToTopic(string $topic, string $title, string $body, array $data = []): array
+    {
+        $firebase = app(FirebaseNotificationService::class);
+
+        if (!$firebase->isEnabled()) {
+            return ['success' => false, 'error' => 'Firebase is disabled'];
+        }
+
+        return $firebase->sendToTopic($topic, $title, $body, $data);
     }
 
     /**

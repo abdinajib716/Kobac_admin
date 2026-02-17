@@ -58,13 +58,21 @@ class Settings extends Page implements HasForms
             'mail_encryption' => Setting::get('mail_encryption', 'tls'),
             'mail_from_address' => Setting::get('mail_from_address'),
             'mail_from_name' => Setting::get('mail_from_name'),
-            'stripe_enabled' => Setting::get('stripe_enabled', false),
-            'stripe_public_key' => Setting::get('stripe_public_key'),
-            'stripe_secret_key' => Setting::get('stripe_secret_key'),
-            'paypal_enabled' => Setting::get('paypal_enabled', false),
-            'paypal_client_id' => Setting::get('paypal_client_id'),
-            'paypal_secret' => Setting::get('paypal_secret'),
-            'paypal_mode' => Setting::get('paypal_mode', 'sandbox'),
+            'waafipay_enabled' => Setting::get('waafipay_enabled', false),
+            'waafipay_environment' => Setting::get('waafipay_environment', 'LIVE'),
+            'waafipay_merchant_uid' => Setting::get('waafipay_merchant_uid'),
+            'waafipay_api_user_id' => Setting::get('waafipay_api_user_id'),
+            'waafipay_api_key' => Setting::get('waafipay_api_key'),
+            'waafipay_merchant_no' => Setting::get('waafipay_merchant_no'),
+            'waafipay_api_url' => Setting::get('waafipay_api_url', 'https://api.waafipay.net/asm'),
+            // Firebase
+            'firebase_enabled' => (bool) Setting::get('firebase_enabled', false),
+            'firebase_project_id' => Setting::get('firebase_project_id'),
+            'firebase_client_email' => Setting::get('firebase_client_email'),
+            'firebase_private_key' => $this->getDecryptedFirebaseKey(),
+            'firebase_sender_id' => Setting::get('firebase_sender_id'),
+            'firebase_server_key' => Setting::get('firebase_server_key'),
+            'firebase_default_topic' => Setting::get('firebase_default_topic', 'kobac_all'),
         ]);
     }
     
@@ -274,44 +282,180 @@ class Settings extends Page implements HasForms
                                         ]),
                                     ]),
                             ]),
-                        Tabs\Tab::make('Payment Methods')
+                        Tabs\Tab::make('Payment Gateway')
                             ->schema([
-                                Forms\Components\Section::make('Stripe')
+                                Forms\Components\Section::make('WaafiPay Configuration')
                                     ->schema([
-                                        Forms\Components\Toggle::make('stripe_enabled')
-                                            ->label('Enable Stripe')
-                                            ->inline(false),
-                                        Forms\Components\TextInput::make('stripe_public_key')
-                                            ->label('Stripe Public Key')
-                                            ->password()
-                                            ->revealable(),
-                                        Forms\Components\TextInput::make('stripe_secret_key')
-                                            ->label('Stripe Secret Key')
-                                            ->password()
-                                            ->revealable(),
-                                    ])
-                                    ->collapsible(),
-                                Forms\Components\Section::make('PayPal')
-                                    ->schema([
-                                        Forms\Components\Toggle::make('paypal_enabled')
-                                            ->label('Enable PayPal')
-                                            ->inline(false),
-                                        Forms\Components\Select::make('paypal_mode')
-                                            ->label('PayPal Mode')
+                                        Forms\Components\Toggle::make('waafipay_enabled')
+                                            ->label('Enable WaafiPay')
+                                            ->inline(false)
+                                            ->helperText('Enable WaafiPay mobile payment gateway for Somalia'),
+                                        Forms\Components\Select::make('waafipay_environment')
+                                            ->label('Environment')
                                             ->options([
-                                                'sandbox' => 'Sandbox (Test)',
-                                                'live' => 'Live (Production)',
+                                                'LIVE' => 'Live (Production)',
+                                                'TEST' => 'Test (Sandbox)',
+                                            ])
+                                            ->required()
+                                            ->helperText('Select LIVE for production, TEST for development'),
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('waafipay_merchant_uid')
+                                                    ->label('Merchant UID')
+                                                    ->helperText('Example: M1234567')
+                                                    ->placeholder('M1234567'),
+                                                Forms\Components\TextInput::make('waafipay_api_user_id')
+                                                    ->label('API User ID')
+                                                    ->helperText('Example: 1234567')
+                                                    ->placeholder('1234567'),
                                             ]),
-                                        Forms\Components\TextInput::make('paypal_client_id')
-                                            ->label('PayPal Client ID')
+                                        Forms\Components\TextInput::make('waafipay_api_key')
+                                            ->label('API Key')
                                             ->password()
-                                            ->revealable(),
-                                        Forms\Components\TextInput::make('paypal_secret')
-                                            ->label('PayPal Secret')
-                                            ->password()
-                                            ->revealable(),
+                                            ->revealable()
+                                            ->helperText('Example: API-xxxxxxxxxxxxx')
+                                            ->placeholder('API-xxxxxxxxxxxxx'),
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('waafipay_merchant_no')
+                                                    ->label('Merchant Number')
+                                                    ->helperText('Example: 123456789')
+                                                    ->placeholder('123456789'),
+                                                Forms\Components\TextInput::make('waafipay_api_url')
+                                                    ->label('API URL')
+                                                    ->default('https://api.waafipay.net/asm')
+                                                    ->helperText('Default: https://api.waafipay.net/asm'),
+                                            ]),
+                                        Forms\Components\Placeholder::make('supported_providers')
+                                            ->label('Supported Mobile Wallets')
+                                            ->content('EVC Plus (Hormuud) • Zaad Service (Telesom) • Jeeb (Golis) • Sahal (Somtel)'),
                                     ])
-                                    ->collapsible(),
+                                    ->description('Configure WaafiPay mobile payment gateway for accepting payments via EVC Plus, Zaad, Jeeb, and Sahal'),
+                                Forms\Components\Section::make('Test Payment')
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('test_info')
+                                            ->label('Test Payment')
+                                            ->content('Send a real test payment to verify your WaafiPay integration is working correctly.'),
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('test_phone')
+                                                    ->label('Phone Number')
+                                                    ->prefix('252')
+                                                    ->placeholder('619821172')
+                                                    ->helperText('Enter 9-digit phone number (without country code)')
+                                                    ->mask('999999999')
+                                                    ->maxLength(9),
+                                                Forms\Components\TextInput::make('test_amount')
+                                                    ->label('Amount (USD)')
+                                                    ->numeric()
+                                                    ->prefix('$')
+                                                    ->placeholder('0.50')
+                                                    ->helperText('Minimum: $0.01')
+                                                    ->step(0.01),
+                                            ]),
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('test_payment')
+                                                ->label('Send Test Payment')
+                                                ->icon('heroicon-o-banknotes')
+                                                ->color('success')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Send Test Payment')
+                                                ->modalDescription('This will send a real payment request to the phone number. Make sure you have approval to charge this number.')
+                                                ->modalSubmitActionLabel('Send Payment')
+                                                ->action(function (array $data) {
+                                                    $this->sendTestPayment($data);
+                                                }),
+                                            Forms\Components\Actions\Action::make('test_connection')
+                                                ->label('Test API Connection')
+                                                ->icon('heroicon-o-signal')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->testWaafiPayConnection();
+                                                }),
+                                        ]),
+                                    ])
+                                    ->description('Configure WaafiPay mobile payment gateway for accepting payments via EVC Plus, Zaad, Jeeb, and Sahal'),
+                                Forms\Components\Section::make('Offline Payment Configuration')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('offline_payment_enabled')
+                                            ->label('Enable Offline Payment')
+                                            ->inline(false)
+                                            ->helperText('Allow users to request subscription via offline/manual payment (requires admin approval)')
+                                            ->live(),
+                                        Forms\Components\Textarea::make('offline_payment_instructions')
+                                            ->label('Payment Instructions')
+                                            ->rows(4)
+                                            ->placeholder("Please transfer the payment to:\nBank: Premier Bank\nAccount: 1234567890\nName: Your Company Name\n\nAfter payment, your subscription will be activated within 24 hours.")
+                                            ->helperText('Instructions shown to users when they choose offline payment')
+                                            ->visible(fn (Forms\Get $get): bool => $get('offline_payment_enabled')),
+                                        Forms\Components\Placeholder::make('offline_info')
+                                            ->label('How Offline Payment Works')
+                                            ->content('1. User selects a plan and chooses offline payment
+2. System creates a pending payment request
+3. Admin reviews and approves/rejects in the Payments section
+4. On approval, the user\'s subscription is activated')
+                                            ->visible(fn (Forms\Get $get): bool => $get('offline_payment_enabled')),
+                                    ])
+                                    ->description('Configure offline/manual payment for users who cannot use mobile wallets'),
+                            ]),
+                        Tabs\Tab::make('Firebase (Push Notifications)')
+                            ->schema([
+                                Forms\Components\Section::make('Firebase Cloud Messaging (FCM)')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('firebase_enabled')
+                                            ->label('Enable Push Notifications')
+                                            ->inline(false)
+                                            ->helperText('Enable Firebase Cloud Messaging for push notifications to mobile devices')
+                                            ->live(),
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('firebase_project_id')
+                                                    ->label('Project ID')
+                                                    ->placeholder('my-project-12345')
+                                                    ->helperText('Firebase project ID from console.firebase.google.com'),
+                                                Forms\Components\TextInput::make('firebase_client_email')
+                                                    ->label('Service Account Email')
+                                                    ->placeholder('firebase-adminsdk-xxxxx@project.iam.gserviceaccount.com')
+                                                    ->helperText('Client email from your service account JSON file'),
+                                            ])
+                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('firebase_enabled')),
+                                        Forms\Components\Textarea::make('firebase_private_key')
+                                            ->label('Private Key')
+                                            ->rows(4)
+                                            ->placeholder('-----BEGIN PRIVATE KEY-----\nMIIEv...')
+                                            ->helperText('Private key from your service account JSON file. This will be encrypted at rest.')
+                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('firebase_enabled')),
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('firebase_sender_id')
+                                                    ->label('Sender ID (Optional)')
+                                                    ->placeholder('123456789012')
+                                                    ->helperText('FCM Sender ID from Project Settings → Cloud Messaging. Optional — used for reference only.'),
+                                                Forms\Components\TextInput::make('firebase_server_key')
+                                                    ->label('Server Key (Legacy — Deprecated)')
+                                                    ->password()
+                                                    ->revealable()
+                                                    ->placeholder('Not required — leave empty')
+                                                    ->helperText('⚠️ DEPRECATED: Legacy server keys are no longer available from Google Cloud. This system uses the modern FCM HTTP v1 API with service account credentials instead. You can safely leave this empty.'),
+                                            ])
+                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('firebase_enabled')),
+                                        Forms\Components\TextInput::make('firebase_default_topic')
+                                            ->label('Default Topic')
+                                            ->default('kobac_all')
+                                            ->helperText('Default FCM topic for broadcast notifications')
+                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('firebase_enabled')),
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('test_firebase')
+                                                ->label('Test Firebase Connection')
+                                                ->icon('heroicon-o-signal')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->testFirebaseConnection();
+                                                }),
+                                        ])
+                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('firebase_enabled')),
+                                    ])
+                                    ->description('Configure Firebase Cloud Messaging for sending push notifications to Android and iOS devices'),
                             ]),
                     ])
                     ->columnSpanFull(),
@@ -322,6 +466,26 @@ class Settings extends Page implements HasForms
     public function save(): void
     {
         $data = $this->form->getState();
+        
+        // Encrypt Firebase private key before saving (avoid double-encryption)
+        if (!empty($data['firebase_private_key'])) {
+            $currentEncrypted = Setting::get('firebase_private_key');
+            $currentDecrypted = null;
+            if ($currentEncrypted) {
+                try {
+                    $currentDecrypted = decrypt($currentEncrypted);
+                } catch (\Exception $e) {
+                    $currentDecrypted = $currentEncrypted;
+                }
+            }
+            // Only re-encrypt if the key actually changed
+            if ($data['firebase_private_key'] !== $currentDecrypted) {
+                $data['firebase_private_key'] = encrypt($data['firebase_private_key']);
+            } else {
+                // Key unchanged — keep the existing encrypted value
+                $data['firebase_private_key'] = $currentEncrypted;
+            }
+        }
         
         // Save all settings to database
         foreach ($data as $key => $value) {
@@ -347,7 +511,7 @@ class Settings extends Page implements HasForms
         Notification::make()
             ->title('Settings saved successfully!')
             ->success()
-            ->body('Email configuration updated in database and .env file')
+            ->body('All configuration settings have been updated')
             ->duration(2000)
             ->send();
         
@@ -496,6 +660,344 @@ class Settings extends Page implements HasForms
                 ->body('Error: ' . $e->getMessage())
                 ->persistent()
                 ->send();
+        }
+    }
+    
+    public function testWaafiPayConnection(): void
+    {
+        try {
+            // Get current form data
+            $data = $this->form->getState();
+            
+            // Check if WaafiPay is enabled
+            if (!$data['waafipay_enabled']) {
+                Notification::make()
+                    ->title('WaafiPay Disabled')
+                    ->warning()
+                    ->body('Please enable WaafiPay before testing the connection.')
+                    ->send();
+                return;
+            }
+            
+            // Check if all required fields are filled
+            $requiredFields = [
+                'waafipay_merchant_uid' => 'Merchant UID',
+                'waafipay_api_user_id' => 'API User ID',
+                'waafipay_api_key' => 'API Key',
+                'waafipay_merchant_no' => 'Merchant Number',
+            ];
+            
+            $missingFields = [];
+            foreach ($requiredFields as $field => $label) {
+                if (empty($data[$field])) {
+                    $missingFields[] = $label;
+                }
+            }
+            
+            if (!empty($missingFields)) {
+                Notification::make()
+                    ->title('Missing Configuration')
+                    ->warning()
+                    ->body('Please fill in: ' . implode(', ', $missingFields))
+                    ->persistent()
+                    ->send();
+                return;
+            }
+            
+            // Temporarily save settings to test
+            foreach ($data as $key => $value) {
+                if (str_starts_with($key, 'waafipay_')) {
+                    Setting::set($key, $value);
+                }
+            }
+            
+            // Create WaafiPay service instance
+            $waafiPay = new \App\Services\WaafiPayService();
+            
+            // Check if configured
+            if (!$waafiPay->isConfigured()) {
+                Notification::make()
+                    ->title('Configuration Error')
+                    ->danger()
+                    ->body('WaafiPay configuration is incomplete.')
+                    ->persistent()
+                    ->send();
+                return;
+            }
+            
+            // Test API connection with a dummy check
+            $testPayload = [
+                'schemaVersion' => '1.0',
+                'requestId' => 'TEST-' . time(),
+                'timestamp' => time(),
+                'channelName' => 'WEB',
+                'serviceName' => 'API_PURCHASE',
+                'serviceParams' => [
+                    'merchantUid' => $data['waafipay_merchant_uid'],
+                    'apiUserId' => $data['waafipay_api_user_id'],
+                    'apiKey' => $data['waafipay_api_key'],
+                ],
+            ];
+            
+            $response = \Http::timeout(10)->post($data['waafipay_api_url'], $testPayload);
+            
+            if ($response->successful() || $response->status() === 400) {
+                // 400 is expected for incomplete test payload, but means API is reachable
+                Notification::make()
+                    ->title('Connection Successful!')
+                    ->success()
+                    ->body('WaafiPay API is reachable. Environment: ' . $data['waafipay_environment'])
+                    ->duration(5000)
+                    ->send();
+                    
+                \Log::info('WaafiPay connection test successful', [
+                    'environment' => $data['waafipay_environment'],
+                    'merchant_uid' => $data['waafipay_merchant_uid'],
+                ]);
+            } else {
+                throw new \Exception('API returned status: ' . $response->status());
+            }
+            
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Connection Failed')
+                ->danger()
+                ->body('Error: ' . $e->getMessage())
+                ->persistent()
+                ->send();
+                
+            \Log::error('WaafiPay connection test failed: ' . $e->getMessage());
+        }
+    }
+    
+    public function sendTestPayment(array $formData): void
+    {
+        try {
+            $data = $this->form->getState();
+            
+            // Validate phone number
+            if (empty($data['test_phone'])) {
+                Notification::make()
+                    ->title('Validation Error')
+                    ->warning()
+                    ->body('Please enter a phone number')
+                    ->send();
+                return;
+            }
+            
+            // Validate amount
+            if (empty($data['test_amount']) || $data['test_amount'] < 0.01) {
+                Notification::make()
+                    ->title('Validation Error')
+                    ->warning()
+                    ->body('Please enter an amount (minimum $0.01)')
+                    ->send();
+                return;
+            }
+            
+            // Check if WaafiPay is enabled and configured
+            if (!$data['waafipay_enabled']) {
+                Notification::make()
+                    ->title('WaafiPay Disabled')
+                    ->warning()
+                    ->body('Please enable WaafiPay before testing payments.')
+                    ->send();
+                return;
+            }
+            
+            // Save current settings temporarily
+            foreach ($data as $key => $value) {
+                if (str_starts_with($key, 'waafipay_')) {
+                    Setting::set($key, $value);
+                }
+            }
+            
+            // Create WaafiPay service instance
+            $waafiPay = new \App\Services\WaafiPayService();
+            
+            if (!$waafiPay->isConfigured()) {
+                Notification::make()
+                    ->title('Configuration Error')
+                    ->danger()
+                    ->body('WaafiPay is not properly configured. Please fill all required fields.')
+                    ->persistent()
+                    ->send();
+                return;
+            }
+            
+            // Prepare payment parameters
+            $paymentParams = [
+                'phone_number' => $data['test_phone'],
+                'amount' => $data['test_amount'],
+                'customer_name' => 'Test Payment',
+                'description' => 'WaafiPay Integration Test Payment - ' . now()->format('Y-m-d H:i:s'),
+                'channel' => 'ADMIN_PANEL',
+                'customer_id' => auth()->id(),
+            ];
+            
+            // Call WaafiPay API
+            $result = $waafiPay->purchase($paymentParams);
+            
+            if ($result['success']) {
+                $message = $result['status'] === 'success' 
+                    ? '✅ Payment completed successfully!'
+                    : '📱 Payment request sent! Check phone 252' . $data['test_phone'] . ' for approval.';
+                
+                Notification::make()
+                    ->title('Test Payment Sent')
+                    ->success()
+                    ->body($message . ' Reference: ' . $result['reference_id'])
+                    ->duration(10000)
+                    ->send();
+                    
+                \Log::info('Test payment sent successfully', [
+                    'reference_id' => $result['reference_id'],
+                    'transaction_id' => $result['transaction_id'],
+                    'status' => $result['status'],
+                ]);
+            } else {
+                $errorDetails = $result['message'] ?? 'Payment request failed';
+                if (isset($result['error_code'])) {
+                    $errorDetails .= ' (Code: ' . $result['error_code'] . ')';
+                }
+                if (isset($result['response_code'])) {
+                    $errorDetails .= ' [Response: ' . $result['response_code'] . ']';
+                }
+                
+                Notification::make()
+                    ->title('Payment Failed')
+                    ->danger()
+                    ->body($errorDetails . ' - Check logs for full details.')
+                    ->persistent()
+                    ->send();
+                    
+                \Log::error('Test payment failed', [
+                    'error' => $result['message'] ?? 'Unknown error',
+                    'error_code' => $result['error_code'] ?? null,
+                    'response_code' => $result['response_code'] ?? null,
+                    'phone' => '252' . $data['test_phone'],
+                    'full_response' => $result,
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Payment Error')
+                ->danger()
+                ->body('Error: ' . $e->getMessage())
+                ->persistent()
+                ->send();
+                
+            \Log::error('Test payment exception: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get decrypted Firebase private key for form display
+     */
+    protected function getDecryptedFirebaseKey(): ?string
+    {
+        $encrypted = Setting::get('firebase_private_key');
+        if (empty($encrypted)) {
+            return null;
+        }
+        
+        try {
+            return decrypt($encrypted);
+        } catch (\Exception $e) {
+            return $encrypted;
+        }
+    }
+    
+    /**
+     * Test Firebase connection
+     */
+    public function testFirebaseConnection(): void
+    {
+        try {
+            $data = $this->form->getState();
+            
+            if (!$data['firebase_enabled']) {
+                Notification::make()
+                    ->title('Firebase Disabled')
+                    ->warning()
+                    ->body('Please enable Firebase before testing the connection.')
+                    ->send();
+                return;
+            }
+            
+            $requiredFields = [
+                'firebase_project_id' => 'Project ID',
+                'firebase_client_email' => 'Client Email',
+                'firebase_private_key' => 'Private Key',
+            ];
+            
+            $missing = [];
+            foreach ($requiredFields as $field => $label) {
+                if (empty($data[$field])) {
+                    $missing[] = $label;
+                }
+            }
+            
+            if (!empty($missing)) {
+                Notification::make()
+                    ->title('Missing Configuration')
+                    ->warning()
+                    ->body('Please fill in: ' . implode(', ', $missing))
+                    ->persistent()
+                    ->send();
+                return;
+            }
+            
+            // Temporarily save Firebase settings for the test
+            foreach ($data as $key => $value) {
+                if (str_starts_with($key, 'firebase_')) {
+                    if ($key === 'firebase_private_key' && !empty($value)) {
+                        // Avoid double-encryption
+                        $currentEncrypted = Setting::get('firebase_private_key');
+                        $currentDecrypted = null;
+                        if ($currentEncrypted) {
+                            try { $currentDecrypted = decrypt($currentEncrypted); } catch (\Exception $e) { $currentDecrypted = $currentEncrypted; }
+                        }
+                        Setting::set($key, ($value !== $currentDecrypted) ? encrypt($value) : $currentEncrypted);
+                    } else {
+                        Setting::set($key, $value);
+                    }
+                }
+            }
+            
+            $firebase = app(\App\Services\FirebaseNotificationService::class);
+            $result = $firebase->testConnection();
+            
+            if ($result['success']) {
+                Notification::make()
+                    ->title('Firebase Connected!')
+                    ->success()
+                    ->body($result['message'])
+                    ->duration(5000)
+                    ->send();
+                    
+                \Log::info('Firebase connection test successful', [
+                    'project_id' => $data['firebase_project_id'],
+                ]);
+            } else {
+                Notification::make()
+                    ->title('Connection Failed')
+                    ->danger()
+                    ->body($result['message'])
+                    ->persistent()
+                    ->send();
+            }
+            
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Firebase Test Failed')
+                ->danger()
+                ->body('Error: ' . $e->getMessage())
+                ->persistent()
+                ->send();
+                
+            \Log::error('Firebase connection test failed: ' . $e->getMessage());
         }
     }
 }
