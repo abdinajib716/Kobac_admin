@@ -27,7 +27,7 @@ class SetBranchContext
             return $next($request);
         }
 
-        $business = $user->business;
+        $business = $user->currentBusiness();
         
         if (!$business) {
             return $next($request);

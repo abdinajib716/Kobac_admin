@@ -69,10 +69,26 @@ class BaseController extends Controller
     }
 
     /**
-     * Get the user's business (for business users)
+     * Get the user's business (for business users - owners AND staff)
      */
     protected function business()
     {
-        return $this->user()?->business;
+        return $this->user()?->currentBusiness();
+    }
+
+    /**
+     * Get the current branch from request context
+     */
+    protected function branchId()
+    {
+        return request()->attributes->get('branch_id');
+    }
+
+    /**
+     * Get the current branch model from request context
+     */
+    protected function branch()
+    {
+        return request()->attributes->get('branch');
     }
 }

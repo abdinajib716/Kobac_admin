@@ -83,6 +83,30 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasOne(Business::class);
     }
 
+    /**
+     * Get all business memberships (as owner or staff)
+     */
+    public function businessMemberships(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BusinessUser::class);
+    }
+
+    /**
+     * Get the current business (as owner OR staff member)
+     * Returns owned business first, then staff membership
+     */
+    public function currentBusiness(): ?Business
+    {
+        // First check if user owns a business
+        if ($this->business) {
+            return $this->business;
+        }
+
+        // Then check if user is a staff member of any business
+        $membership = $this->businessMemberships()->with('business')->where('is_active', true)->first();
+        return $membership?->business;
+    }
+
      public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Country::class);

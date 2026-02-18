@@ -396,8 +396,63 @@ GET /dashboard
 
 ### Get Activity Feed
 ```
-GET /activity
+GET /activity?per_page=50
 ```
+
+**Headers (Business Users):**
+```
+X-Branch-ID: {branch_id}   # Optional, defaults to main branch
+```
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| per_page | int | 20 | Items per page (max 50) |
+| page | int | 1 | Page number |
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": "income_123",
+            "type": "income",
+            "description": "Sales revenue",
+            "amount": 500.00,
+            "category": "sales",
+            "account_name": "Cash",
+            "account_id": 45,
+            "reference": "INV-001",
+            "timestamp": "2026-02-18T09:30:00+00:00",
+            "date": "2026-02-18"
+        },
+        {
+            "id": "expense_456",
+            "type": "expense",
+            "description": "Office supplies",
+            "amount": 50.00,
+            "category": "supplies",
+            "account_name": "Cash",
+            "account_id": 45,
+            "reference": null,
+            "timestamp": "2026-02-18T08:15:00+00:00",
+            "date": "2026-02-18"
+        }
+    ],
+    "pagination": {
+        "current_page": 1,
+        "per_page": 50,
+        "total": 2
+    }
+}
+```
+
+**Notes:**
+- Returns combined income and expense transactions sorted by timestamp (newest first)
+- Business users: filtered by branch context from `X-Branch-ID` header
+- Individual users: returns all user's transactions
+- Each item has `type` field to distinguish income vs expense
 
 ### Update Profile
 ```

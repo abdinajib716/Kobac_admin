@@ -12,18 +12,28 @@ class ActivityController extends BaseController
     /**
      * Get activity timeline
      * GET /api/v1/activity
+     * 
+     * For business users: uses X-Branch-ID header for branch filtering
      */
     public function index(Request $request): JsonResponse
     {
         $user = $this->user();
         $perPage = min($request->get('per_page', 20), 50);
+        $branchId = $this->branchId();
 
         $activities = collect();
 
         // Get income transactions
-        $incomeQuery = $user->isIndividual()
-            ? IncomeTransaction::forUser($user)
-            : ($user->business ? IncomeTransaction::forBusiness($user->business->id) : collect());
+        if ($user->isIndividual()) {
+            $incomeQuery = IncomeTransaction::forUser($user);
+        } else {
+            $business = $this->business();
+            if ($business) {
+                $incomeQuery = IncomeTransaction::forBusiness($business->id, $branchId);
+            } else {
+                $incomeQuery = null;
+            }
+        }
 
         if ($incomeQuery instanceof \Illuminate\Database\Eloquent\Builder) {
             $incomes = $incomeQuery->with('account')->latest()->take(50)->get();
@@ -31,9 +41,12 @@ class ActivityController extends BaseController
                 $activities->push([
                     'id' => 'income_' . $income->id,
                     'type' => 'income',
-                    'description' => 'Recorded income: ' . ($income->description ?? 'No description'),
+                    'description' => $income->description ?? 'Income recorded',
                     'amount' => (float) $income->amount,
+                    'category' => $income->category,
                     'account_name' => $income->account->name ?? 'Unknown',
+                    'account_id' => $income->account_id,
+                    'reference' => $income->reference,
                     'timestamp' => $income->created_at->toIso8601String(),
                     'date' => $income->transaction_date->toDateString(),
                 ]);
@@ -41,9 +54,16 @@ class ActivityController extends BaseController
         }
 
         // Get expense transactions
-        $expenseQuery = $user->isIndividual()
-            ? ExpenseTransaction::forUser($user)
-            : ($user->business ? ExpenseTransaction::forBusiness($user->business->id) : collect());
+        if ($user->isIndividual()) {
+            $expenseQuery = ExpenseTransaction::forUser($user);
+        } else {
+            $business = $this->business();
+            if ($business) {
+                $expenseQuery = ExpenseTransaction::forBusiness($business->id, $branchId);
+            } else {
+                $expenseQuery = null;
+            }
+        }
 
         if ($expenseQuery instanceof \Illuminate\Database\Eloquent\Builder) {
             $expenses = $expenseQuery->with('account')->latest()->take(50)->get();
@@ -51,9 +71,12 @@ class ActivityController extends BaseController
                 $activities->push([
                     'id' => 'expense_' . $expense->id,
                     'type' => 'expense',
-                    'description' => 'Recorded expense: ' . ($expense->description ?? 'No description'),
+                    'description' => $expense->description ?? 'Expense recorded',
                     'amount' => (float) $expense->amount,
+                    'category' => $expense->category,
                     'account_name' => $expense->account->name ?? 'Unknown',
+                    'account_id' => $expense->account_id,
+                    'reference' => $expense->reference,
                     'timestamp' => $expense->created_at->toIso8601String(),
                     'date' => $expense->transaction_date->toDateString(),
                 ]);
