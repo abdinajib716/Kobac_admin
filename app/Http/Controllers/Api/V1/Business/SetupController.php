@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Business;
 
 use App\Http\Controllers\Api\V1\BaseController;
 use App\Models\Business;
+use App\Models\BusinessUser;
 use App\Models\Branch;
 use App\Models\Account;
 use Illuminate\Http\Request;
@@ -60,6 +61,16 @@ class SetupController extends BaseController
                 'email' => $data['business']['email'] ?? null,
                 'address' => $data['business']['address'] ?? null,
                 'currency' => $data['business']['currency'] ?? 'USD',
+            ]);
+
+            // Create owner as BusinessUser
+            BusinessUser::create([
+                'business_id' => $business->id,
+                'user_id' => $user->id,
+                'role' => BusinessUser::ROLE_OWNER,
+                'branch_id' => null, // Owner has access to all branches
+                'permissions' => [], // Owner has full permissions by default
+                'is_active' => true,
             ]);
 
             // Create main branch

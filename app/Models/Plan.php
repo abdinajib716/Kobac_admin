@@ -84,6 +84,7 @@ class Plan extends Model
             'multi_branch',
             'profit_loss',
             'dashboard',
+            'users',
         ];
 
         // If stored as list of enabled feature keys, convert to map.

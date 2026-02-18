@@ -35,6 +35,7 @@ class CheckFeatureEnabled
             'stock',
             'profit_loss',
             'branches',
+            'users',
         ];
 
         // Individual users - block business-only features

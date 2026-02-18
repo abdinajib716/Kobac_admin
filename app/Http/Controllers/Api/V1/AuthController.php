@@ -81,15 +81,21 @@ class AuthController extends BaseController
         // Business users need subscription
         if ($user->isBusiness()) {
             $plan = Plan::findOrFail($data['plan_id']);
-            $subscription = Subscription::createTrialForUser($user, $plan);
             
-            $response['subscription'] = [
-                'id' => $subscription->id,
-                'plan_name' => $plan->name,
-                'status' => $subscription->status,
-                'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
-                'days_remaining' => $subscription->days_remaining,
-            ];
+            // Only create trial subscription if plan has trial enabled
+            // Otherwise, user must pay first via payment screen
+            if ($plan->trial_enabled && $plan->trial_days > 0) {
+                $subscription = Subscription::createTrialForUser($user, $plan);
+                
+                $response['subscription'] = [
+                    'id' => $subscription->id,
+                    'plan_name' => $plan->name,
+                    'status' => $subscription->status,
+                    'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
+                    'days_remaining' => $subscription->days_remaining,
+                ];
+            }
+            // If no trial, subscription field is omitted - Flutter will redirect to payment
         }
 
         // Create token

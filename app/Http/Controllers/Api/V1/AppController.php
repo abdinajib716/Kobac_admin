@@ -77,6 +77,12 @@ class AppController extends BaseController
             'route' => '/business/branches',
             'business_only' => true,
         ],
+        'users' => [
+            'name' => 'Users',
+            'icon' => 'user-plus',
+            'route' => '/business/users',
+            'business_only' => true,
+        ],
     ];
 
     /**

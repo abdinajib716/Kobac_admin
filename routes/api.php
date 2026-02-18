@@ -196,6 +196,14 @@ Route::prefix('v1')->group(function () {
             Route::middleware('feature.enabled:profit_loss')->group(function () {
                 Route::get('profit-loss', [\App\Http\Controllers\Api\V1\Business\ProfitLossController::class, 'index']);
             });
+            
+            // Users/Staff Management - with feature guard
+            Route::middleware('feature.enabled:users')->group(function () {
+                Route::get('users/permissions', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'permissions']);
+                Route::apiResource('users', \App\Http\Controllers\Api\V1\Business\BusinessUserController::class);
+                Route::post('users/{businessUser}/deactivate', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'deactivate']);
+                Route::post('users/{businessUser}/activate', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'activate']);
+            });
         });
         
         // Business read-only routes (for expired trials) - with feature guards
@@ -214,6 +222,11 @@ Route::prefix('v1')->group(function () {
             });
             Route::middleware('feature.enabled:profit_loss')->group(function () {
                 Route::get('profit-loss', [\App\Http\Controllers\Api\V1\Business\ProfitLossController::class, 'index']);
+            });
+            Route::middleware('feature.enabled:users')->group(function () {
+                Route::get('users', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'index']);
+                Route::get('users/permissions', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'permissions']);
+                Route::get('users/{businessUser}', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'show']);
             });
         });
         

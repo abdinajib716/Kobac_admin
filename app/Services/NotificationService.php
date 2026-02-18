@@ -8,10 +8,12 @@ use App\Mail\OfflinePaymentRejectedMail;
 use App\Mail\OfflinePaymentSubmittedMail;
 use App\Mail\PasswordResetMail;
 use App\Mail\PaymentFailedMail;
+use App\Mail\StaffInvitationMail;
 use App\Mail\SubscriptionActivatedMail;
 use App\Mail\SubscriptionExpiredMail;
 use App\Mail\TrialExpiredMail;
 use App\Mail\TrialExpiringMail;
+use App\Models\Business;
 use App\Models\User;
 use App\Notifications\SystemAlertNotification;
 use App\Notifications\WelcomeNotification;
@@ -295,6 +297,34 @@ class NotificationService
             ));
         } catch (\Exception $e) {
             Log::error('Failed to send offline payment rejected email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send staff invitation email
+     */
+    public static function sendStaffInvitation(
+        User $user,
+        Business $business,
+        string $role,
+        ?string $branchName = null,
+        ?string $temporaryPassword = null
+    ): void {
+        try {
+            Mail::to($user->email)->send(new StaffInvitationMail(
+                user: $user,
+                business: $business,
+                role: $role,
+                branchName: $branchName,
+                temporaryPassword: $temporaryPassword,
+                loginUrl: config('app.url'),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send staff invitation email', [
+                'user_id' => $user->id,
+                'business_id' => $business->id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 

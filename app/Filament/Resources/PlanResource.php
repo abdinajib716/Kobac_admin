@@ -161,6 +161,10 @@ class PlanResource extends Resource
                                     ->label('Dashboard')
                                     ->helperText('Business dashboard')
                                     ->default(true),
+                                Forms\Components\Toggle::make('features.users')
+                                    ->label('Users (Team Management)')
+                                    ->helperText('Invite and manage staff')
+                                    ->default(true),
                             ]),
                     ]),
                     

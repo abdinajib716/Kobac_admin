@@ -710,6 +710,173 @@ PUT    /business/branches/{id}
 DELETE /business/branches/{id}
 ```
 
+### Users (Staff Management)
+
+**Feature Guard:** `users`
+
+```
+GET    /business/users                      # List all team members
+GET    /business/users/permissions          # Get available permissions & roles
+POST   /business/users                      # Invite new user
+GET    /business/users/{id}                 # Get user details
+PUT    /business/users/{id}                 # Update user role/permissions
+DELETE /business/users/{id}                 # Remove user from business
+POST   /business/users/{id}/deactivate      # Deactivate user
+POST   /business/users/{id}/activate        # Activate user
+```
+
+#### List Users
+```
+GET /business/users?active_only=true&role=staff&branch_id=1
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "users": [
+            {
+                "id": 1,
+                "user_id": 5,
+                "name": "John Doe",
+                "email": "john@example.com",
+                "phone": "252612345678",
+                "avatar": null,
+                "role": "admin",
+                "role_label": "Admin",
+                "branch_id": null,
+                "branch_name": null,
+                "permissions": {
+                    "customers": true,
+                    "vendors": true,
+                    "income": true,
+                    "expense": true,
+                    "stock": true,
+                    "accounts": true,
+                    "reports": true
+                },
+                "is_active": true,
+                "is_owner": false,
+                "is_admin": true,
+                "created_at": "2026-02-18T10:00:00+00:00"
+            }
+        ],
+        "summary": {
+            "total": 3,
+            "owners": 1,
+            "admins": 1,
+            "staff": 1
+        }
+    }
+}
+```
+
+#### Invite User
+```
+POST /business/users
+```
+
+**Request:**
+```json
+{
+    "email": "newuser@example.com",
+    "name": "New User",
+    "phone": "252612345678",
+    "role": "staff",
+    "branch_id": 1,
+    "permissions": {
+        "customers": true,
+        "vendors": true,
+        "income": true,
+        "expense": true,
+        "stock": false,
+        "accounts": false,
+        "reports": false
+    }
+}
+```
+
+**Notes:**
+- If email exists: Links existing user to business
+- If email doesn't exist: Creates new user account with temporary password
+- `role` must be `admin` or `staff` (cannot invite as owner)
+- `branch_id` is optional (null = all branches)
+
+**Error Codes:**
+| Code | Description |
+|------|-------------|
+| `ALREADY_MEMBER` | User is already a member of this business |
+| `OWNS_BUSINESS` | User already owns another business |
+| `INVALID_BRANCH` | Branch doesn't belong to this business |
+
+#### Update User
+```
+PUT /business/users/{id}
+```
+
+**Request:**
+```json
+{
+    "role": "admin",
+    "branch_id": null,
+    "permissions": {
+        "customers": true,
+        "vendors": true,
+        "income": true,
+        "expense": true,
+        "stock": true,
+        "accounts": true,
+        "reports": true
+    },
+    "is_active": true
+}
+```
+
+**Error Codes:**
+| Code | Description |
+|------|-------------|
+| `CANNOT_MODIFY_OWNER` | Cannot modify business owner |
+
+#### Remove User
+```
+DELETE /business/users/{id}
+```
+
+**Error Codes:**
+| Code | Description |
+|------|-------------|
+| `CANNOT_REMOVE_OWNER` | Cannot remove business owner |
+| `CANNOT_REMOVE_SELF` | Cannot remove yourself from the business |
+
+#### Get Available Permissions
+```
+GET /business/users/permissions
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "permissions": {
+            "customers": {"name": "Customers", "description": "View and manage customers (receivables)"},
+            "vendors": {"name": "Vendors", "description": "View and manage vendors (payables)"},
+            "income": {"name": "Income", "description": "Record income transactions"},
+            "expense": {"name": "Expenses", "description": "Record expense transactions"},
+            "stock": {"name": "Stock", "description": "Manage stock/inventory"},
+            "accounts": {"name": "Accounts", "description": "View and manage accounts"},
+            "reports": {"name": "Reports", "description": "View profit & loss and other reports"}
+        },
+        "roles": {
+            "owner": {"name": "Owner", "description": "Full access to everything. Cannot be modified."},
+            "admin": {"name": "Admin", "description": "Full access to all features. Can manage staff."},
+            "staff": {"name": "Staff", "description": "Limited access based on assigned permissions."}
+        }
+    }
+}
+```
+
 ### Summaries
 ```
 GET /business/receivables/summary
