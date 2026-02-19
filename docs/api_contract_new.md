@@ -113,18 +113,20 @@ POST /api/v1/business/users/{businessUser}/resend-invitation
 
 None required.
 
-### Success Response (201)
+### Success Response (200)
 
 ```json
 {
   "success": true,
   "message": "Invitation resent successfully",
   "data": {
-    "email": "staff@example.com",
-    "resent_at": "2026-02-19T09:30:00+00:00"
+    "email": "najiibmaxamed716@gmail.com",
+    "resent_at": "2026-02-19T09:32:00+00:00"
   }
 }
 ```
+
+**Tested:** ✅ Feb 19, 2026 - Invitation email sent to staff user ID 5
 
 ### Error Responses
 
@@ -329,11 +331,13 @@ POST /api/v1/auth/forgot-password
   "success": true,
   "message": "Reset code sent to your email",
   "data": {
-    "email": "user@example.com",
+    "email": "najiibkarshe81@gmail.com",
     "expires_in": 900
   }
 }
 ```
+
+**Tested:** ✅ Feb 19, 2026 - Email sent successfully with 6-digit OTP code
 
 ### Email Sent
 
@@ -368,12 +372,20 @@ User receives an email with:
 
 ## Summary of New Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/support/whatsapp` | No | Get WhatsApp widget config |
-| POST | `/business/users/{id}/resend-invitation` | Yes | Resend staff invitation email |
-| POST | `/business/users/{id}/reset-password` | Yes | Reset staff password |
-| POST | `/auth/forgot-password` | No | Request password reset (now sends email) |
+| Method | Endpoint | Auth | Description | Tested |
+|--------|----------|------|-------------|--------|
+| GET | `/support/whatsapp` | No | Get WhatsApp widget config | ✅ |
+| POST | `/business/users/{id}/resend-invitation` | Yes | Resend staff invitation email | ✅ |
+| POST | `/business/users/{id}/reset-password` | Yes | Reset staff password | ✅ |
+| POST | `/auth/forgot-password` | No | Request password reset (sends email) | ✅ |
+
+### Test Users Used
+
+| User | Email | Role | Business User ID |
+|------|-------|------|------------------|
+| Mohamed | najiibkarshe81@gmail.com | Owner | 1 |
+| Johan Test | johaanpoi663@gmail.com | Admin | 4 |
+| Najiib Karshe | najiibmaxamed716@gmail.com | Staff | 5 |
 
 ---
 

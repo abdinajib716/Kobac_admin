@@ -4,16 +4,14 @@ namespace App\Mail;
 
 use App\Models\User;
 use App\Models\Business;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class StaffInvitationMail extends Mailable implements ShouldQueue
+class StaffInvitationMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public string $role;
     public ?string $branchName;

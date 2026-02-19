@@ -148,16 +148,38 @@ class AuthController extends BaseController
             ];
         }
 
-        // Business users - subscription based
+        // Business users - subscription based (owners and staff)
         if ($user->isBusiness()) {
-            $subscription = $user->subscription;
-            if ($subscription) {
-                $response['subscription'] = [
-                    'status' => $subscription->status,
-                    'plan_name' => $subscription->plan->name ?? 'Unknown',
-                    'can_write' => $subscription->canWrite(),
-                    'days_remaining' => $subscription->days_remaining,
+            // Get business via currentBusiness() which works for both owners and staff
+            $business = $user->currentBusiness();
+            
+            if ($business) {
+                // Get subscription from business owner
+                $subscription = $business->owner?->subscription;
+                
+                if ($subscription) {
+                    $response['subscription'] = [
+                        'status' => $subscription->status,
+                        'plan_name' => $subscription->plan->name ?? 'Unknown',
+                        'can_write' => $subscription->canWrite(),
+                        'days_remaining' => $subscription->days_remaining,
+                    ];
+                }
+
+                // Add business info
+                $response['business'] = [
+                    'id' => $business->id,
+                    'name' => $business->name,
+                    'is_setup_complete' => true,
                 ];
+
+                // Add staff role info if user is staff
+                $businessUser = $user->businessMemberships()->where('business_id', $business->id)->first();
+                if ($businessUser) {
+                    $response['user']['role'] = $businessUser->role;
+                    $response['user']['permissions'] = $businessUser->permissions ?? [];
+                    $response['user']['current_branch_id'] = $businessUser->branch_id ?? $business->branches()->where('is_main', true)->value('id');
+                }
             }
         }
 

@@ -286,10 +286,14 @@ class BusinessUserController extends BaseController
         }
 
         $user = $businessUser->user;
-        $business = $this->business();
+        $business = $businessUser->business;
 
         if (!$user) {
             return $this->error('User not found', 'USER_NOT_FOUND', 404);
+        }
+
+        if (!$business) {
+            return $this->error('Business not found', 'BUSINESS_NOT_FOUND', 404);
         }
 
         // Generate new temporary password
@@ -337,7 +341,11 @@ class BusinessUserController extends BaseController
 
         $data = $validator->validated();
         $user = $businessUser->user;
-        $business = $this->business();
+        $business = $businessUser->business;
+
+        if (!$user || !$business) {
+            return $this->error('User or business not found', 'NOT_FOUND', 404);
+        }
 
         // Generate or use provided password
         $newPassword = $data['new_password'] ?? Str::random(12);
