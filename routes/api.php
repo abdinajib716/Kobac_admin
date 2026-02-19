@@ -200,7 +200,11 @@ Route::prefix('v1')->group(function () {
             // Users/Staff Management - with feature guard
             Route::middleware('feature.enabled:users')->group(function () {
                 Route::get('users/permissions', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'permissions']);
-                Route::apiResource('users', \App\Http\Controllers\Api\V1\Business\BusinessUserController::class);
+                Route::get('users', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'index']);
+                Route::post('users', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'store']);
+                Route::get('users/{businessUser}', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'show']);
+                Route::put('users/{businessUser}', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'update']);
+                Route::delete('users/{businessUser}', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'destroy']);
                 Route::post('users/{businessUser}/deactivate', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'deactivate']);
                 Route::post('users/{businessUser}/activate', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'activate']);
             });

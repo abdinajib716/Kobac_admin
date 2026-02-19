@@ -87,8 +87,8 @@ class ActivityLogger
                 'created' => "Created stock item: {$name}",
                 'updated' => "Updated stock item: {$name}",
                 'deleted' => "Deleted stock item: {$name}",
-                'increase' => "Increased stock: {$name} by {$properties['quantity'] ?? 0}",
-                'decrease' => "Decreased stock: {$name} by {$properties['quantity'] ?? 0}",
+                'increase' => "Increased stock: {$name} by " . ($properties['quantity'] ?? 0),
+                'decrease' => "Decreased stock: {$name} by " . ($properties['quantity'] ?? 0),
                 default => "Stock {$action}",
             },
             'account' => match($action) {
