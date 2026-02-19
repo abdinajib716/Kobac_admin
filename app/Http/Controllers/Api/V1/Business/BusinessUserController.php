@@ -273,6 +273,96 @@ class BusinessUserController extends BaseController
     }
 
     /**
+     * Resend invitation email to staff user
+     * POST /api/v1/business/users/{businessUser}/resend-invitation
+     */
+    public function resendInvitation(BusinessUser $businessUser): JsonResponse
+    {
+        $this->authorizeBusinessUser($businessUser);
+
+        // Cannot resend to owner
+        if ($businessUser->isOwner()) {
+            return $this->error('Cannot resend invitation to business owner', 'CANNOT_RESEND_TO_OWNER', 400);
+        }
+
+        $user = $businessUser->user;
+        $business = $this->business();
+
+        if (!$user) {
+            return $this->error('User not found', 'USER_NOT_FOUND', 404);
+        }
+
+        // Generate new temporary password
+        $tempPassword = Str::random(12);
+        $user->update(['password' => Hash::make($tempPassword)]);
+
+        // Send invitation email
+        NotificationService::sendStaffInvitation(
+            $user,
+            $business,
+            $businessUser->role,
+            $businessUser->branch?->name,
+            $tempPassword
+        );
+
+        return $this->success([
+            'email' => $user->email,
+            'resent_at' => now()->toIso8601String(),
+        ], 'Invitation resent successfully');
+    }
+
+    /**
+     * Reset staff user password (for owner/admin to reset staff password)
+     * POST /api/v1/business/users/{businessUser}/reset-password
+     */
+    public function resetPassword(Request $request, BusinessUser $businessUser): JsonResponse
+    {
+        $this->authorizeBusinessUser($businessUser);
+
+        // Cannot reset owner password
+        if ($businessUser->isOwner()) {
+            return $this->error('Cannot reset business owner password', 'CANNOT_RESET_OWNER', 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'new_password' => 'sometimes|string|min:8|max:100',
+            'send_email' => 'sometimes|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Validation failed', 'VALIDATION_ERROR', 422, [
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $data = $validator->validated();
+        $user = $businessUser->user;
+        $business = $this->business();
+
+        // Generate or use provided password
+        $newPassword = $data['new_password'] ?? Str::random(12);
+        $user->update(['password' => Hash::make($newPassword)]);
+
+        // Optionally send email with new password
+        $sendEmail = $data['send_email'] ?? true;
+        if ($sendEmail) {
+            NotificationService::sendPasswordResetNotification(
+                $user,
+                $newPassword,
+                $business->name
+            );
+        }
+
+        return $this->success([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'password_reset_at' => now()->toIso8601String(),
+            'email_sent' => $sendEmail,
+            'temporary_password' => $sendEmail ? null : $newPassword,
+        ], 'Password reset successfully');
+    }
+
+    /**
      * Get available permissions list
      * GET /api/v1/business/users/permissions
      */

@@ -256,14 +256,13 @@ class AuthController extends BaseController
             'expires_at' => now()->addMinutes(15),
         ], now()->addMinutes(15));
 
-        // TODO: Send SMS/Email with code
-        // For now, log it (remove in production)
-        \Log::info("Password reset code for {$user->email}: {$code}");
+        // Send OTP email
+        \App\Services\NotificationService::sendForgotPasswordOtp($user, $code);
 
         return $this->success([
             'email' => $user->email,
             'expires_in' => 900, // 15 minutes in seconds
-        ], 'Reset code sent to your email/phone');
+        ], 'Reset code sent to your email');
     }
 
     /**

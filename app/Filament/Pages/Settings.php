@@ -73,6 +73,13 @@ class Settings extends Page implements HasForms
             'firebase_sender_id' => Setting::get('firebase_sender_id'),
             'firebase_server_key' => Setting::get('firebase_server_key'),
             'firebase_default_topic' => Setting::get('firebase_default_topic', 'kobac_all'),
+            // WhatsApp Support
+            'whatsapp_enabled' => (bool) Setting::get('whatsapp_enabled', false),
+            'whatsapp_phone_number' => Setting::get('whatsapp_phone_number'),
+            'whatsapp_agent_name' => Setting::get('whatsapp_agent_name', 'Support'),
+            'whatsapp_agent_title' => Setting::get('whatsapp_agent_title', 'Typically replies instantly'),
+            'whatsapp_greeting_message' => Setting::get('whatsapp_greeting_message'),
+            'whatsapp_default_message' => Setting::get('whatsapp_default_message'),
         ]);
     }
     
@@ -456,6 +463,62 @@ class Settings extends Page implements HasForms
                                             ->visible(fn (Forms\Get $get): bool => (bool) $get('firebase_enabled')),
                                     ])
                                     ->description('Configure Firebase Cloud Messaging for sending push notifications to Android and iOS devices'),
+                            ]),
+                        Tabs\Tab::make('WhatsApp Support')
+                            ->icon('heroicon-o-chat-bubble-left-right')
+                            ->schema([
+                                Forms\Components\Section::make('Widget Status')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('whatsapp_enabled')
+                                            ->label('Enable WhatsApp Widget')
+                                            ->inline(false)
+                                            ->helperText('Show the WhatsApp support button on your website')
+                                            ->live(),
+                                    ])
+                                    ->description('Control the WhatsApp support widget visibility'),
+                                Forms\Components\Section::make('Contact Information')
+                                    ->schema([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('whatsapp_phone_number')
+                                                    ->label('WhatsApp Phone Number')
+                                                    ->required()
+                                                    ->placeholder('252612345678')
+                                                    ->helperText('Include country code without + or spaces (e.g., 252612345678)'),
+                                                Forms\Components\TextInput::make('whatsapp_agent_name')
+                                                    ->label('Agent Name')
+                                                    ->required()
+                                                    ->placeholder('Support Team')
+                                                    ->maxLength(50),
+                                            ]),
+                                        Forms\Components\TextInput::make('whatsapp_agent_title')
+                                            ->label('Agent Title')
+                                            ->required()
+                                            ->placeholder('Typically replies instantly')
+                                            ->maxLength(100),
+                                        Forms\Components\Textarea::make('whatsapp_greeting_message')
+                                            ->label('Greeting Message')
+                                            ->rows(3)
+                                            ->placeholder("Assalamu Alaikum! 👋\nHow can we help you today?")
+                                            ->helperText('Message shown in the WhatsApp popup widget'),
+                                        Forms\Components\TextInput::make('whatsapp_default_message')
+                                            ->label('Default Message')
+                                            ->placeholder('Hello, I need help with...')
+                                            ->helperText('Pre-filled message when user clicks Start Chat'),
+                                    ])
+                                    ->visible(fn (Forms\Get $get): bool => (bool) $get('whatsapp_enabled')),
+                                Forms\Components\Section::make('Preview')
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('whatsapp_preview')
+                                            ->label('How your WhatsApp widget will look')
+                                            ->content(fn (Forms\Get $get) => view('filament.components.whatsapp-preview', [
+                                                'agentName' => $get('whatsapp_agent_name') ?: 'Support',
+                                                'agentTitle' => $get('whatsapp_agent_title') ?: 'Typically replies instantly',
+                                                'greetingMessage' => $get('whatsapp_greeting_message') ?: 'Hello! How can we help you?',
+                                            ])),
+                                    ])
+                                    ->collapsible()
+                                    ->visible(fn (Forms\Get $get): bool => (bool) $get('whatsapp_enabled')),
                             ]),
                     ])
                     ->columnSpanFull(),

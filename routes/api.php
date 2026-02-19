@@ -58,6 +58,9 @@ Route::prefix('v1')->group(function () {
     // Plans (for Business signup)
     Route::get('plans', [\App\Http\Controllers\Api\V1\PlanController::class, 'index']);
     
+    // Support (WhatsApp widget config for mobile app)
+    Route::get('support/whatsapp', [\App\Http\Controllers\Api\V1\SupportController::class, 'whatsapp']);
+    
     // Locations (for registration - public access)
     Route::prefix('locations')->group(function () {
         Route::get('countries', [\App\Http\Controllers\Api\V1\LocationController::class, 'countries']);
@@ -207,6 +210,8 @@ Route::prefix('v1')->group(function () {
                 Route::delete('users/{businessUser}', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'destroy']);
                 Route::post('users/{businessUser}/deactivate', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'deactivate']);
                 Route::post('users/{businessUser}/activate', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'activate']);
+                Route::post('users/{businessUser}/resend-invitation', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'resendInvitation']);
+                Route::post('users/{businessUser}/reset-password', [\App\Http\Controllers\Api\V1\Business\BusinessUserController::class, 'resetPassword']);
             });
         });
         

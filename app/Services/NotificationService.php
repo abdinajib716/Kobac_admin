@@ -328,6 +328,48 @@ class NotificationService
         }
     }
 
+    /**
+     * Send password reset notification email
+     */
+    public static function sendPasswordResetNotification(
+        User $user,
+        string $newPassword,
+        string $businessName
+    ): void {
+        try {
+            Mail::to($user->email)->send(new \App\Mail\PasswordResetNotificationMail(
+                user: $user,
+                newPassword: $newPassword,
+                businessName: $businessName,
+                loginUrl: config('app.url'),
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send password reset notification email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Send forgot password OTP email
+     */
+    public static function sendForgotPasswordOtp(User $user, string $code): void
+    {
+        try {
+            Mail::to($user->email)->send(new \App\Mail\ForgotPasswordOtpMail(
+                user: $user,
+                code: $code,
+                expiresInMinutes: 15,
+            ));
+        } catch (\Exception $e) {
+            Log::error('Failed to send forgot password OTP email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     // ─── Push Notification Methods ───────────────────────────
 
     /**
