@@ -9,6 +9,7 @@ use App\Models\ExpenseTransaction;
 use App\Models\IncomeTransaction;
 use App\Models\StockItem;
 use App\Models\StockMovement;
+use App\Models\Vendor;
 use App\Models\VendorTransaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -27,7 +28,7 @@ class ReportExportController extends BaseController
     public function export(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'report' => 'required|string|in:stock,customers,profit_loss,activity',
+            'report' => 'required|string|in:stock,customers,vendors,profit_loss,activity',
             'format' => 'required|string|in:pdf,xlsx',
             'from' => 'nullable|date',
             'to' => 'nullable|date',
@@ -60,6 +61,14 @@ class ReportExportController extends BaseController
                 $business->currency ?? 'USD'
             ),
             'customers' => $this->buildCustomersDataset(
+                $business->id,
+                $branchId,
+                $business->name,
+                $business->currency ?? 'USD',
+                $from,
+                $to
+            ),
+            'vendors' => $this->buildVendorsDataset(
                 $business->id,
                 $branchId,
                 $business->name,
@@ -170,6 +179,141 @@ class ReportExportController extends BaseController
                 'generated_label' => __('mobile.reports.generated_at'),
                 'generated_at_display' => now()->format('d/m/Y, H:i:s'),
                 'app_name' => __('mobile.app.name'),
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *  title: string,
+     *  columns: array<string,string>,
+     *  rows: array<int,array<string,mixed>>,
+     *  summary: array<string,mixed>,
+     *  meta: array<string,mixed>
+     * }
+     */
+    private function buildVendorsDataset(
+        int $businessId,
+        ?int $branchId,
+        string $businessName,
+        string $currency,
+        ?Carbon $from,
+        ?Carbon $to
+    ): array
+    {
+        $vendorsQuery = Vendor::forBusiness($businessId, $branchId)
+            ->orderBy('name')
+            ->withSum([
+                'transactions as period_credit_total' => function ($query) use ($from, $to) {
+                    $query->where('type', 'credit');
+                    if ($from) {
+                        $query->whereDate('transaction_date', '>=', $from->toDateString());
+                    }
+                    if ($to) {
+                        $query->whereDate('transaction_date', '<=', $to->toDateString());
+                    }
+                },
+            ], 'amount')
+            ->withSum([
+                'transactions as period_debit_total' => function ($query) use ($from, $to) {
+                    $query->where('type', 'debit');
+                    if ($from) {
+                        $query->whereDate('transaction_date', '>=', $from->toDateString());
+                    }
+                    if ($to) {
+                        $query->whereDate('transaction_date', '<=', $to->toDateString());
+                    }
+                },
+            ], 'amount')
+            ->withMax([
+                'transactions as last_transaction_date' => function ($query) use ($from, $to) {
+                    if ($from) {
+                        $query->whereDate('transaction_date', '>=', $from->toDateString());
+                    }
+                    if ($to) {
+                        $query->whereDate('transaction_date', '<=', $to->toDateString());
+                    }
+                },
+            ], 'transaction_date');
+
+        $vendors = $vendorsQuery->get();
+
+        $rows = $vendors->map(function (Vendor $vendor) {
+            $balance = (float) $vendor->balance;
+            $payable = $balance > 0 ? $balance : 0.0;
+            $overpaid = $balance < 0 ? abs($balance) : 0.0;
+
+            return [
+                'name' => $vendor->name,
+                'phone' => $vendor->phone ?? '-',
+                'status' => match ($vendor->status) {
+                    'we_owe' => __('mobile.reports.vendor_status.we_owe'),
+                    'they_owe' => __('mobile.reports.vendor_status.they_owe'),
+                    default => __('mobile.reports.vendor_status.settled'),
+                },
+                'balance' => round($balance, 2),
+                'payable' => round($payable, 2),
+                'overpaid' => round($overpaid, 2),
+                'period_credit' => round((float) ($vendor->period_credit_total ?? 0), 2),
+                'period_debit' => round((float) ($vendor->period_debit_total ?? 0), 2),
+                'last_transaction_date' => $vendor->last_transaction_date
+                    ? Carbon::parse($vendor->last_transaction_date)->toDateString()
+                    : '-',
+            ];
+        })->values()->all();
+
+        $totalPayable = (float) $vendors->filter(fn (Vendor $v) => (float) $v->balance > 0)->sum('balance');
+        $totalOverpaid = (float) $vendors->filter(fn (Vendor $v) => (float) $v->balance < 0)->sum(function (Vendor $v) {
+            return abs((float) $v->balance);
+        });
+        $netBalance = (float) $vendors->sum('balance');
+
+        return [
+            'title' => __('mobile.reports.vendor_report_title'),
+            'columns' => [
+                'name' => __('mobile.reports.vendor_columns.name'),
+                'phone' => __('mobile.reports.vendor_columns.phone'),
+                'status' => __('mobile.reports.vendor_columns.status'),
+                'balance' => __('mobile.reports.vendor_columns.balance') . " ({$currency})",
+                'payable' => __('mobile.reports.vendor_columns.payable') . " ({$currency})",
+                'overpaid' => __('mobile.reports.vendor_columns.overpaid') . " ({$currency})",
+                'period_credit' => __('mobile.reports.vendor_columns.period_credit') . " ({$currency})",
+                'period_debit' => __('mobile.reports.vendor_columns.period_debit') . " ({$currency})",
+                'last_transaction_date' => __('mobile.reports.vendor_columns.last_transaction_date'),
+            ],
+            'rows' => $rows,
+            'summary' => [
+                'total_vendors' => $vendors->count(),
+                'active_vendors' => $vendors->where('is_active', true)->count(),
+                'vendors_with_payables' => $vendors->filter(fn (Vendor $v) => (float) $v->balance > 0)->count(),
+                'total_payable' => round($totalPayable, 2),
+                'total_overpaid' => round($totalOverpaid, 2),
+                'net_balance' => round($netBalance, 2),
+                'period_total_credit' => round((float) $vendors->sum(fn (Vendor $v) => (float) ($v->period_credit_total ?? 0)), 2),
+                'period_total_debit' => round((float) $vendors->sum(fn (Vendor $v) => (float) ($v->period_debit_total ?? 0)), 2),
+                'period_from' => $from?->toDateString(),
+                'period_to' => $to?->toDateString(),
+            ],
+            'meta' => [
+                'report_key' => 'vendors',
+                'branch_id' => $branchId,
+                'business_name' => $businessName,
+                'currency' => $currency,
+                'generated_label' => __('mobile.reports.generated_at'),
+                'generated_at_display' => now()->format('d/m/Y, H:i:s'),
+                'app_name' => __('mobile.app.name'),
+                'summary_labels' => [
+                    'total_vendors' => __('mobile.reports.vendor_summary.total_vendors'),
+                    'active_vendors' => __('mobile.reports.vendor_summary.active_vendors'),
+                    'vendors_with_payables' => __('mobile.reports.vendor_summary.vendors_with_payables'),
+                    'total_payable' => __('mobile.reports.vendor_summary.total_payable') . " ({$currency})",
+                    'total_overpaid' => __('mobile.reports.vendor_summary.total_overpaid') . " ({$currency})",
+                    'net_balance' => __('mobile.reports.vendor_summary.net_balance') . " ({$currency})",
+                    'period_total_credit' => __('mobile.reports.vendor_summary.period_total_credit') . " ({$currency})",
+                    'period_total_debit' => __('mobile.reports.vendor_summary.period_total_debit') . " ({$currency})",
+                    'period_from' => __('mobile.reports.from_date'),
+                    'period_to' => __('mobile.reports.to_date'),
+                ],
             ],
         ];
     }
