@@ -46,6 +46,7 @@ class StockController extends BaseController
             'summary' => [
                 'total_items' => $allItems->count(),
                 'total_quantity' => (float) $allItems->sum('quantity'),
+                'total_value' => (float) $totalCostValue,
                 'total_cost_value' => (float) $totalCostValue,
                 'total_selling_value' => (float) $totalSellingValue,
                 'low_stock_count' => $lowStockCount,
@@ -313,6 +314,7 @@ class StockController extends BaseController
         $to = $request->get('to');
 
         $query = $stock->movements()
+            ->with('createdBy:id,name')
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to, fn ($q) => $q->where('created_at', '<=', $to))
             ->orderBy('created_at', 'desc');
@@ -327,7 +329,7 @@ class StockController extends BaseController
             'quantity_after' => (float) $m->quantity_after,
             'reason' => $m->reason,
             'reference' => $m->reference,
-            'created_by' => $m->user?->name,
+            'created_by' => $m->createdBy?->name,
             'created_at' => $m->created_at->toIso8601String(),
         ]);
 

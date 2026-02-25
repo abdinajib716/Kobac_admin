@@ -70,11 +70,17 @@ class DashboardController extends BaseController
 
         // Stock summary
         $stockQuery = StockItem::forBusiness($business->id, $branchId)->active();
-        $stockItems = $stockQuery->count();
-        $stockValue = $stockQuery->get()->sum(fn ($item) => $item->quantity * ($item->selling_price ?? 0));
+        $stockItemsCollection = $stockQuery->get();
+        $stockItems = $stockItemsCollection->count();
+        $stockCostValue = $stockItemsCollection->sum(fn ($item) => $item->quantity * ($item->cost_price ?? 0));
+        $stockSellingValue = $stockItemsCollection->sum(fn ($item) => $item->quantity * ($item->selling_price ?? 0));
+        $stockPotentialProfit = $stockSellingValue - $stockCostValue;
 
         // P&L this month
         $profitLoss = $monthIncome - $monthExpense;
+        $profitMarginPercent = $monthIncome > 0
+            ? round(($profitLoss / $monthIncome) * 100, 2)
+            : 0.0;
 
         // Branch comparison (only if no specific branch selected)
         $branchComparison = [];
@@ -136,10 +142,15 @@ class DashboardController extends BaseController
             ],
             'stock' => [
                 'total_items' => $stockItems,
-                'total_value' => (float) $stockValue,
+                // total_value is cost-based inventory value for accounting
+                'total_value' => (float) $stockCostValue,
+                'total_cost_value' => (float) $stockCostValue,
+                'total_selling_value' => (float) $stockSellingValue,
+                'potential_profit' => (float) $stockPotentialProfit,
             ],
             'profit_loss' => [
                 'this_month' => (float) $profitLoss,
+                'profit_margin_percent' => (float) $profitMarginPercent,
             ],
             'branch_comparison' => $branchComparison,
         ]);

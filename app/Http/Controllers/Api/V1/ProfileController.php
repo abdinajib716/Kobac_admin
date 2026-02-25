@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 
 class ProfileController extends BaseController
@@ -47,7 +48,65 @@ class ProfileController extends BaseController
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'preferred_locale' => $user->preferred_locale ?? config('app.locale', 'en'),
             'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
         ], 'Profile updated successfully');
+    }
+
+    /**
+     * Get mobile app preferences.
+     * GET /api/v1/profile/preferences
+     */
+    public function preferences(): JsonResponse
+    {
+        $user = $this->user();
+        $supported = config('localization.supported_locales', []);
+        $locale = $user->preferred_locale ?? config('app.locale', 'en');
+
+        return $this->success([
+            'locale' => $locale,
+            'fallback_locale' => config('app.fallback_locale', 'en'),
+            'available_locales' => collect($supported)->map(function (array $meta, string $code) {
+                return [
+                    'code' => $code,
+                    'name' => $meta['name'] ?? strtoupper($code),
+                    'native_name' => $meta['native_name'] ?? strtoupper($code),
+                    'rtl' => (bool) ($meta['rtl'] ?? false),
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Update mobile app preferences.
+     * PUT /api/v1/profile/preferences
+     */
+    public function updatePreferences(Request $request): JsonResponse
+    {
+        $locales = array_keys(config('localization.supported_locales', ['en' => []]));
+
+        $validator = Validator::make($request->all(), [
+            'locale' => ['required', 'string', Rule::in($locales)],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error(__('mobile.errors.validation_failed'), 'VALIDATION_ERROR', 422, [
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $user = $this->user();
+        $locale = $validator->validated()['locale'];
+
+        $user->update([
+            'preferred_locale' => $locale,
+        ]);
+
+        app()->setLocale($locale);
+
+        return $this->success([
+            'locale' => $locale,
+            'message_key' => 'mobile.messages.language_changed',
+        ], __('mobile.messages.preferences_updated'));
     }
 }

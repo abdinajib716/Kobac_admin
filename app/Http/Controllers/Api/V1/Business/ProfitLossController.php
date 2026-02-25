@@ -58,6 +58,9 @@ class ProfitLossController extends BaseController
 
         // Calculate P&L
         $profitLoss = $totalIncome - $totalExpense;
+        $profitMarginPercent = $totalIncome > 0
+            ? round(($profitLoss / $totalIncome) * 100, 2)
+            : 0.0;
 
         return $this->success([
             'period' => [
@@ -73,6 +76,7 @@ class ProfitLossController extends BaseController
                 'by_category' => array_map('floatval', $expenseByCategory),
             ],
             'profit_loss' => (float) $profitLoss,
+            'profit_margin_percent' => (float) $profitMarginPercent,
             'currency' => $business->currency,
         ]);
     }

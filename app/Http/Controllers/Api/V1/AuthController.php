@@ -26,6 +26,7 @@ class AuthController extends BaseController
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
+            'preferred_locale' => 'nullable|string|in:' . implode(',', array_keys(config('localization.supported_locales', ['en' => []]))),
             'password' => ['required', 'confirmed', Password::min(8)],
             'plan_id' => 'required_if:user_type,business|exists:plans,id',
             // Location fields
@@ -71,6 +72,7 @@ class AuthController extends BaseController
             'address' => $data['address'] ?? null,
             'password' => Hash::make($data['password']),
             'user_type' => $data['user_type'],
+            'preferred_locale' => $data['preferred_locale'] ?? config('app.locale', 'en'),
             'is_active' => true,
         ]);
 
@@ -414,6 +416,7 @@ class AuthController extends BaseController
             'email' => $user->email,
             'phone' => $user->phone,
             'user_type' => $user->user_type,
+            'preferred_locale' => $user->preferred_locale ?? config('app.locale', 'en'),
             'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
             'is_active' => $user->is_active,
             'created_at' => $user->created_at->toIso8601String(),

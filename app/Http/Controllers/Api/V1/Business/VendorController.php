@@ -291,6 +291,7 @@ class VendorController extends BaseController
         $to = $request->get('to');
 
         $query = $vendor->transactions()
+            ->with('createdBy:id,name')
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to, fn ($q) => $q->where('created_at', '<=', $to))
             ->orderBy('created_at', 'desc');
@@ -308,7 +309,7 @@ class VendorController extends BaseController
                 'amount' => (float) $t->amount,
                 'description' => $t->description,
                 'balance_after' => (float) $balanceAfter,
-                'created_by' => $t->user?->name,
+                'created_by' => $t->createdBy?->name,
                 'created_at' => $t->created_at->toIso8601String(),
             ];
         });

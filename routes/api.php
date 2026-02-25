@@ -60,6 +60,12 @@ Route::prefix('v1')->group(function () {
     
     // Support (WhatsApp widget config for mobile app)
     Route::get('support/whatsapp', [\App\Http\Controllers\Api\V1\SupportController::class, 'whatsapp']);
+
+    // Localization payload for mobile runtime (no auth required)
+    Route::prefix('localization')->group(function () {
+        Route::get('languages', [\App\Http\Controllers\Api\V1\LocalizationController::class, 'languages']);
+        Route::get('translations', [\App\Http\Controllers\Api\V1\LocalizationController::class, 'translations']);
+    });
     
     // Locations (for registration - public access)
     Route::prefix('locations')->group(function () {
@@ -103,6 +109,8 @@ Route::prefix('v1')->group(function () {
         
         // Profile
         Route::put('profile', [\App\Http\Controllers\Api\V1\ProfileController::class, 'update']);
+        Route::get('profile/preferences', [\App\Http\Controllers\Api\V1\ProfileController::class, 'preferences']);
+        Route::put('profile/preferences', [\App\Http\Controllers\Api\V1\ProfileController::class, 'updatePreferences']);
         
         // Dashboard
         Route::get('dashboard', [\App\Http\Controllers\Api\V1\DashboardController::class, 'index']);
@@ -217,6 +225,8 @@ Route::prefix('v1')->group(function () {
         
         // Business read-only routes (for expired trials) - with feature guards
         Route::middleware(['user.type:business', 'branch.context'])->prefix('business')->group(function () {
+            Route::get('reports/export', [\App\Http\Controllers\Api\V1\Business\ReportExportController::class, 'export']);
+
             Route::middleware('feature.enabled:customers')->group(function () {
                 Route::get('customers', [\App\Http\Controllers\Api\V1\Business\CustomerController::class, 'index']);
                 Route::get('customers/{customer}', [\App\Http\Controllers\Api\V1\Business\CustomerController::class, 'show']);

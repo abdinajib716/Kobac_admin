@@ -114,6 +114,7 @@ class AppController extends BaseController
             return $this->success([
                 'user_type' => 'individual',
                 'is_free' => true,
+                'locale' => $user->preferred_locale ?? app()->getLocale(),
                 'apps' => $apps,
                 'write_blocked' => false,
                 'block_reason' => null,
@@ -169,6 +170,7 @@ class AppController extends BaseController
             return $this->success([
                 'user_type' => 'business',
                 'is_free' => false,
+                'locale' => $user->preferred_locale ?? app()->getLocale(),
                 'plan_name' => $plan?->name ?? 'No Plan',
                 'apps' => $apps,
                 'write_blocked' => !$canWrite,
