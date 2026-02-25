@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Business;
 
 use App\Http\Controllers\Api\V1\BaseController;
 use App\Models\StockItem;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -106,6 +107,15 @@ class StockController extends BaseController
             'is_active' => true,
         ]);
 
+        ActivityLogger::stock('created', $stockItem, [
+            'business_id' => $business->id,
+            'branch_id' => $stockItem->branch_id,
+            'stock_item_id' => $stockItem->id,
+            'name' => $stockItem->name,
+            'sku' => $stockItem->sku,
+            'quantity' => (float) $stockItem->quantity,
+        ]);
+
         return $this->success($this->formatStockItem($stockItem), 'Stock item created successfully', 201);
     }
 
@@ -154,6 +164,15 @@ class StockController extends BaseController
 
         $stock->update($data);
 
+        ActivityLogger::stock('updated', $stock, [
+            'business_id' => $stock->business_id,
+            'branch_id' => $stock->branch_id,
+            'stock_item_id' => $stock->id,
+            'name' => $stock->name,
+            'sku' => $stock->sku,
+            'quantity' => (float) $stock->quantity,
+        ]);
+
         return $this->success($this->formatStockItem($stock), 'Stock item updated successfully');
     }
 
@@ -169,7 +188,18 @@ class StockController extends BaseController
             return $this->error('Cannot delete stock with movements. Deactivate instead.', 'HAS_MOVEMENTS', 400);
         }
 
+        $deletedPayload = [
+            'business_id' => $stock->business_id,
+            'branch_id' => $stock->branch_id,
+            'stock_item_id' => $stock->id,
+            'name' => $stock->name,
+            'sku' => $stock->sku,
+            'quantity' => (float) $stock->quantity,
+        ];
+
         $stock->delete();
+
+        ActivityLogger::stock('deleted', null, $deletedPayload);
 
         return $this->success(null, 'Stock item deleted successfully');
     }
@@ -285,6 +315,15 @@ class StockController extends BaseController
 
         $stock->update(['is_active' => false]);
 
+        ActivityLogger::stock('updated', $stock, [
+            'business_id' => $stock->business_id,
+            'branch_id' => $stock->branch_id,
+            'stock_item_id' => $stock->id,
+            'name' => $stock->name,
+            'sku' => $stock->sku,
+            'quantity' => (float) $stock->quantity,
+        ]);
+
         return $this->success($this->formatStockItem($stock), 'Stock item deactivated successfully');
     }
 
@@ -297,6 +336,15 @@ class StockController extends BaseController
         $this->authorizeStock($stock);
 
         $stock->update(['is_active' => true]);
+
+        ActivityLogger::stock('updated', $stock, [
+            'business_id' => $stock->business_id,
+            'branch_id' => $stock->branch_id,
+            'stock_item_id' => $stock->id,
+            'name' => $stock->name,
+            'sku' => $stock->sku,
+            'quantity' => (float) $stock->quantity,
+        ]);
 
         return $this->success($this->formatStockItem($stock), 'Stock item activated successfully');
     }

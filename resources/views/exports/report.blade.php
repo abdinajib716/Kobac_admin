@@ -28,6 +28,27 @@
         .summary p {
             margin: 3px 0;
         }
+        .stock-intro {
+            margin: 8px 0 14px;
+            font-size: 13px;
+        }
+        .stock-intro p {
+            margin: 2px 0;
+        }
+        .totals-box {
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+        .totals-box p {
+            margin: 4px 0;
+        }
+        .footer {
+            margin-top: 18px;
+            font-size: 11px;
+            color: #4b5563;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -46,11 +67,25 @@
 </head>
 <body>
     <h1>{{ $title }}</h1>
-    <div class="meta">
-        Generated at: {{ now()->toDateTimeString() }}
-    </div>
 
-    @if (!empty($summary))
+    @if (($meta['report_key'] ?? null) === 'stock')
+        <div class="stock-intro">
+            @if (!empty($meta['business_name']))
+                <p><strong>{{ $meta['business_name'] }}</strong></p>
+            @endif
+            <p>
+                <strong>{{ $meta['total_products_label'] ?? 'Total products' }}</strong>
+                {{ $summary['total_items'] ?? 0 }}
+            </p>
+        </div>
+    @else
+        <div class="meta">
+            {{ $meta['generated_label'] ?? 'Generated at' }}:
+            {{ $meta['generated_at_display'] ?? now()->format('d/m/Y, H:i:s') }}
+        </div>
+    @endif
+
+    @if (!empty($summary) && (($meta['report_key'] ?? null) !== 'stock'))
         <div class="summary">
             @foreach ($summary as $key => $value)
                 <p><strong>{{ ucwords(str_replace('_', ' ', $key)) }}:</strong> {{ is_bool($value) ? ($value ? 'Yes' : 'No') : ($value ?? '-') }}</p>
@@ -75,11 +110,27 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ count($columns) }}">No records found.</td>
+                    <td colspan="{{ count($columns) }}">{{ __('mobile.reports.no_records') }}</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
+
+    @if (($meta['report_key'] ?? null) === 'stock')
+        <div class="totals-box">
+            <p><strong>{{ $meta['money_section_label'] ?? 'Totals' }}</strong></p>
+            <p>
+                {{ $meta['total_stock_value_label'] ?? 'Total stock value' }}
+                ({{ $meta['currency'] ?? 'USD' }})
+                <strong>{{ number_format((float) ($summary['total_cost_value'] ?? 0), 2) }}</strong>
+            </p>
+        </div>
+    @endif
+
+    <div class="footer">
+        {{ $meta['generated_label'] ?? 'Generated at' }}
+        {{ $meta['generated_at_display'] ?? now()->format('d/m/Y, H:i:s') }}
+        | {{ $meta['app_name'] ?? 'Kobac' }} |
+    </div>
 </body>
 </html>
-

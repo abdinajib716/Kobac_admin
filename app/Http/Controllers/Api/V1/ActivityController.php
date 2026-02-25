@@ -8,6 +8,7 @@ use App\Models\StockMovement;
 use App\Models\VendorTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Spatie\Activitylog\Models\Activity as ActivityLog;
 
 class ActivityController extends BaseController
 {
@@ -147,6 +148,52 @@ class ActivityController extends BaseController
                     'stock_sku' => $movement->stockItem?->sku,
                     'timestamp' => $movement->created_at->toIso8601String(),
                     'date' => $movement->created_at->toDateString(),
+                ]);
+            }
+
+            // Stock CRUD activity events (create/update/delete)
+            $stockCrudActivities = ActivityLog::query()
+                ->where('log_name', 'stock')
+                ->where('properties->business_id', $business->id)
+                ->when($branchId, function ($query) use ($branchId) {
+                    $query->where(function ($subQuery) use ($branchId) {
+                        $subQuery->where('properties->branch_id', (int) $branchId)
+                            ->orWhereNull('properties->branch_id');
+                    });
+                })
+                ->with('causer:id,name')
+                ->latest()
+                ->take(50)
+                ->get();
+
+            foreach ($stockCrudActivities as $stockActivity) {
+                $action = data_get($stockActivity->properties, 'action', $stockActivity->event);
+                $name = data_get($stockActivity->properties, 'name');
+                $sku = data_get($stockActivity->properties, 'sku');
+
+                $type = match ($action) {
+                    'created' => 'stock_created',
+                    'updated' => 'stock_updated',
+                    'deleted' => 'stock_deleted',
+                    default => 'stock_' . $action,
+                };
+
+                $activities->push([
+                    'id' => 'stock_activity_' . $stockActivity->id,
+                    'type' => $type,
+                    'description' => $stockActivity->description ?: ('Stock item ' . $action),
+                    'amount' => null,
+                    'quantity' => data_get($stockActivity->properties, 'quantity'),
+                    'category' => 'stock',
+                    'account_name' => null,
+                    'account_id' => null,
+                    'reference' => $sku,
+                    'created_by' => $stockActivity->causer?->name,
+                    'stock_item_id' => data_get($stockActivity->properties, 'stock_item_id', $stockActivity->subject_id),
+                    'stock_item_name' => $name,
+                    'stock_sku' => $sku,
+                    'timestamp' => $stockActivity->created_at->toIso8601String(),
+                    'date' => $stockActivity->created_at->toDateString(),
                 ]);
             }
         }

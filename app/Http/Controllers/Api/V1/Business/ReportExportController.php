@@ -52,7 +52,12 @@ class ReportExportController extends BaseController
         $to = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : null;
 
         $dataset = match ($report) {
-            'stock' => $this->buildStockDataset($business->id, $branchId),
+            'stock' => $this->buildStockDataset(
+                $business->id,
+                $branchId,
+                $business->name,
+                $business->currency ?? 'USD'
+            ),
             'profit_loss' => $this->buildProfitLossDataset($business->id, $branchId, $from, $to),
             'activity' => $this->buildActivityDataset($business->id, $branchId, $from, $to),
             default => null,
@@ -105,7 +110,12 @@ class ReportExportController extends BaseController
      *  meta: array<string,mixed>
      * }
      */
-    private function buildStockDataset(int $businessId, ?int $branchId): array
+    private function buildStockDataset(
+        int $businessId,
+        ?int $branchId,
+        string $businessName,
+        string $currency
+    ): array
     {
         $items = StockItem::forBusiness($businessId, $branchId)
             ->orderBy('name')
@@ -113,47 +123,44 @@ class ReportExportController extends BaseController
 
         $rows = $items->map(function (StockItem $item) {
             $costValue = $item->quantity * ($item->cost_price ?? 0);
-            $sellingValue = $item->quantity * ($item->selling_price ?? 0);
+            $displayQuantity = rtrim(rtrim(number_format((float) $item->quantity, 2, '.', ''), '0'), '.');
 
             return [
                 'name' => $item->name,
-                'sku' => $item->sku,
-                'quantity' => (float) $item->quantity,
-                'unit' => $item->unit,
                 'cost_price' => (float) ($item->cost_price ?? 0),
                 'selling_price' => (float) ($item->selling_price ?? 0),
-                'cost_value' => (float) $costValue,
-                'selling_value' => (float) $sellingValue,
-                'status' => $item->is_active ? 'active' : 'inactive',
+                'stock_quantity' => trim($displayQuantity . ' ' . ($item->unit ?? '')),
+                'stock_value' => (float) $costValue,
             ];
         })->values()->all();
 
         $totalCostValue = $items->sum(fn (StockItem $item) => $item->quantity * ($item->cost_price ?? 0));
-        $totalSellingValue = $items->sum(fn (StockItem $item) => $item->quantity * ($item->selling_price ?? 0));
 
         return [
-            'title' => 'Stock Report',
+            'title' => __('mobile.reports.stock_report_title'),
             'columns' => [
-                'name' => 'Name',
-                'sku' => 'SKU',
-                'quantity' => 'Quantity',
-                'unit' => 'Unit',
-                'cost_price' => 'Cost Price',
-                'selling_price' => 'Selling Price',
-                'cost_value' => 'Cost Value',
-                'selling_value' => 'Selling Value',
-                'status' => 'Status',
+                'name' => __('mobile.reports.stock_columns.name'),
+                'cost_price' => __('mobile.reports.stock_columns.cost_price') . " ({$currency})",
+                'selling_price' => __('mobile.reports.stock_columns.selling_price') . " ({$currency})",
+                'stock_quantity' => __('mobile.reports.stock_columns.stock_quantity'),
+                'stock_value' => __('mobile.reports.stock_columns.stock_value') . " ({$currency})",
             ],
             'rows' => $rows,
             'summary' => [
                 'total_items' => $items->count(),
-                'total_quantity' => (float) $items->sum('quantity'),
                 'total_cost_value' => (float) $totalCostValue,
-                'total_selling_value' => (float) $totalSellingValue,
-                'potential_profit' => (float) ($totalSellingValue - $totalCostValue),
             ],
             'meta' => [
+                'report_key' => 'stock',
                 'branch_id' => $branchId,
+                'business_name' => $businessName,
+                'currency' => $currency,
+                'total_products_label' => __('mobile.reports.total_products'),
+                'money_section_label' => __('mobile.reports.money_section'),
+                'total_stock_value_label' => __('mobile.reports.total_stock_value'),
+                'generated_label' => __('mobile.reports.generated_at'),
+                'generated_at_display' => now()->format('d/m/Y, H:i:s'),
+                'app_name' => __('mobile.app.name'),
             ],
         ];
     }
@@ -370,4 +377,3 @@ class ReportExportController extends BaseController
         ];
     }
 }
-

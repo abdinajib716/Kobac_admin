@@ -150,10 +150,22 @@ return [
         'profit_loss' => 'Profit & Loss',
         'stock_report' => 'Stock report',
         'activity_report' => 'Activity report',
+        'stock_report_title' => 'General Stock Report',
+        'total_products' => 'Total products',
+        'money_section' => 'Totals',
+        'total_stock_value' => 'Total stock value',
+        'no_records' => 'No records found',
         'generated_at' => 'Generated at',
         'period' => 'Period',
         'from_date' => 'From date',
         'to_date' => 'To date',
+        'stock_columns' => [
+            'name' => 'Name',
+            'cost_price' => 'Purchase price',
+            'selling_price' => 'Selling price',
+            'stock_quantity' => 'Stock quantity',
+            'stock_value' => 'Stock value',
+        ],
     ],
 
     'support' => [
@@ -180,4 +192,3 @@ return [
         'unsupported_export_format' => 'Unsupported export format',
     ],
 ];
-

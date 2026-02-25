@@ -150,10 +150,22 @@ return [
         'profit_loss' => 'Faa iido iyo Khasaare',
         'stock_report' => 'Warbixinta kaydka',
         'activity_report' => 'Warbixinta dhaqdhaqaaqa',
+        'stock_report_title' => 'Warbixinta Alaabaha Guud',
+        'total_products' => 'Tirada alaabta',
+        'money_section' => 'Lacagta',
+        'total_stock_value' => 'Qiimaha keydka guud',
+        'no_records' => 'Wax xog ah lama helin',
         'generated_at' => 'La sameeyey',
         'period' => 'Muddada',
         'from_date' => 'Laga bilaabo',
         'to_date' => 'Ilaa',
+        'stock_columns' => [
+            'name' => 'Magaca',
+            'cost_price' => 'Qiimaha soo iibinta',
+            'selling_price' => 'Qiimaha sii iibinta',
+            'stock_quantity' => 'Tirada keydka taala',
+            'stock_value' => 'Qiimaha keydka',
+        ],
     ],
 
     'support' => [
@@ -180,4 +192,3 @@ return [
         'unsupported_export_format' => 'Nooca dhoofinta lama taageero',
     ],
 ];
-
