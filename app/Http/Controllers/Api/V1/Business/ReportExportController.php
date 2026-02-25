@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Business;
 
 use App\Exports\ArrayReportExport;
 use App\Http\Controllers\Api\V1\BaseController;
+use App\Models\Customer;
 use App\Models\ExpenseTransaction;
 use App\Models\IncomeTransaction;
 use App\Models\StockItem;
@@ -26,7 +27,7 @@ class ReportExportController extends BaseController
     public function export(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'report' => 'required|string|in:stock,profit_loss,activity',
+            'report' => 'required|string|in:stock,customers,profit_loss,activity',
             'format' => 'required|string|in:pdf,xlsx',
             'from' => 'nullable|date',
             'to' => 'nullable|date',
@@ -57,6 +58,14 @@ class ReportExportController extends BaseController
                 $branchId,
                 $business->name,
                 $business->currency ?? 'USD'
+            ),
+            'customers' => $this->buildCustomersDataset(
+                $business->id,
+                $branchId,
+                $business->name,
+                $business->currency ?? 'USD',
+                $from,
+                $to
             ),
             'profit_loss' => $this->buildProfitLossDataset($business->id, $branchId, $from, $to),
             'activity' => $this->buildActivityDataset($business->id, $branchId, $from, $to),
@@ -161,6 +170,141 @@ class ReportExportController extends BaseController
                 'generated_label' => __('mobile.reports.generated_at'),
                 'generated_at_display' => now()->format('d/m/Y, H:i:s'),
                 'app_name' => __('mobile.app.name'),
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *  title: string,
+     *  columns: array<string,string>,
+     *  rows: array<int,array<string,mixed>>,
+     *  summary: array<string,mixed>,
+     *  meta: array<string,mixed>
+     * }
+     */
+    private function buildCustomersDataset(
+        int $businessId,
+        ?int $branchId,
+        string $businessName,
+        string $currency,
+        ?Carbon $from,
+        ?Carbon $to
+    ): array
+    {
+        $customersQuery = Customer::forBusiness($businessId, $branchId)
+            ->orderBy('name')
+            ->withSum([
+                'transactions as period_debit_total' => function ($query) use ($from, $to) {
+                    $query->where('type', 'debit');
+                    if ($from) {
+                        $query->whereDate('transaction_date', '>=', $from->toDateString());
+                    }
+                    if ($to) {
+                        $query->whereDate('transaction_date', '<=', $to->toDateString());
+                    }
+                },
+            ], 'amount')
+            ->withSum([
+                'transactions as period_credit_total' => function ($query) use ($from, $to) {
+                    $query->where('type', 'credit');
+                    if ($from) {
+                        $query->whereDate('transaction_date', '>=', $from->toDateString());
+                    }
+                    if ($to) {
+                        $query->whereDate('transaction_date', '<=', $to->toDateString());
+                    }
+                },
+            ], 'amount')
+            ->withMax([
+                'transactions as last_transaction_date' => function ($query) use ($from, $to) {
+                    if ($from) {
+                        $query->whereDate('transaction_date', '>=', $from->toDateString());
+                    }
+                    if ($to) {
+                        $query->whereDate('transaction_date', '<=', $to->toDateString());
+                    }
+                },
+            ], 'transaction_date');
+
+        $customers = $customersQuery->get();
+
+        $rows = $customers->map(function (Customer $customer) {
+            $balance = (float) $customer->balance;
+            $receivable = $balance > 0 ? $balance : 0.0;
+            $advance = $balance < 0 ? abs($balance) : 0.0;
+
+            return [
+                'name' => $customer->name,
+                'phone' => $customer->phone ?? '-',
+                'status' => match ($customer->status) {
+                    'owes_us' => __('mobile.reports.customer_status.owes_us'),
+                    'we_owe' => __('mobile.reports.customer_status.we_owe'),
+                    default => __('mobile.reports.customer_status.settled'),
+                },
+                'balance' => round($balance, 2),
+                'receivable' => round($receivable, 2),
+                'advance' => round($advance, 2),
+                'period_debit' => round((float) ($customer->period_debit_total ?? 0), 2),
+                'period_credit' => round((float) ($customer->period_credit_total ?? 0), 2),
+                'last_transaction_date' => $customer->last_transaction_date
+                    ? Carbon::parse($customer->last_transaction_date)->toDateString()
+                    : '-',
+            ];
+        })->values()->all();
+
+        $totalReceivable = (float) $customers->filter(fn (Customer $c) => (float) $c->balance > 0)->sum('balance');
+        $totalAdvance = (float) $customers->filter(fn (Customer $c) => (float) $c->balance < 0)->sum(function (Customer $c) {
+            return abs((float) $c->balance);
+        });
+        $netBalance = (float) $customers->sum('balance');
+
+        return [
+            'title' => __('mobile.reports.customer_report_title'),
+            'columns' => [
+                'name' => __('mobile.reports.customer_columns.name'),
+                'phone' => __('mobile.reports.customer_columns.phone'),
+                'status' => __('mobile.reports.customer_columns.status'),
+                'balance' => __('mobile.reports.customer_columns.balance') . " ({$currency})",
+                'receivable' => __('mobile.reports.customer_columns.receivable') . " ({$currency})",
+                'advance' => __('mobile.reports.customer_columns.advance') . " ({$currency})",
+                'period_debit' => __('mobile.reports.customer_columns.period_debit') . " ({$currency})",
+                'period_credit' => __('mobile.reports.customer_columns.period_credit') . " ({$currency})",
+                'last_transaction_date' => __('mobile.reports.customer_columns.last_transaction_date'),
+            ],
+            'rows' => $rows,
+            'summary' => [
+                'total_customers' => $customers->count(),
+                'active_customers' => $customers->where('is_active', true)->count(),
+                'customers_with_receivables' => $customers->filter(fn (Customer $c) => (float) $c->balance > 0)->count(),
+                'total_receivable' => round($totalReceivable, 2),
+                'total_advance' => round($totalAdvance, 2),
+                'net_balance' => round($netBalance, 2),
+                'period_total_debit' => round((float) $customers->sum(fn (Customer $c) => (float) ($c->period_debit_total ?? 0)), 2),
+                'period_total_credit' => round((float) $customers->sum(fn (Customer $c) => (float) ($c->period_credit_total ?? 0)), 2),
+                'period_from' => $from?->toDateString(),
+                'period_to' => $to?->toDateString(),
+            ],
+            'meta' => [
+                'report_key' => 'customers',
+                'branch_id' => $branchId,
+                'business_name' => $businessName,
+                'currency' => $currency,
+                'generated_label' => __('mobile.reports.generated_at'),
+                'generated_at_display' => now()->format('d/m/Y, H:i:s'),
+                'app_name' => __('mobile.app.name'),
+                'summary_labels' => [
+                    'total_customers' => __('mobile.reports.customer_summary.total_customers'),
+                    'active_customers' => __('mobile.reports.customer_summary.active_customers'),
+                    'customers_with_receivables' => __('mobile.reports.customer_summary.customers_with_receivables'),
+                    'total_receivable' => __('mobile.reports.customer_summary.total_receivable') . " ({$currency})",
+                    'total_advance' => __('mobile.reports.customer_summary.total_advance') . " ({$currency})",
+                    'net_balance' => __('mobile.reports.customer_summary.net_balance') . " ({$currency})",
+                    'period_total_debit' => __('mobile.reports.customer_summary.period_total_debit') . " ({$currency})",
+                    'period_total_credit' => __('mobile.reports.customer_summary.period_total_credit') . " ({$currency})",
+                    'period_from' => __('mobile.reports.from_date'),
+                    'period_to' => __('mobile.reports.to_date'),
+                ],
             ],
         ];
     }

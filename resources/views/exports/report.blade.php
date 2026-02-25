@@ -88,7 +88,10 @@
     @if (!empty($summary) && (($meta['report_key'] ?? null) !== 'stock'))
         <div class="summary">
             @foreach ($summary as $key => $value)
-                <p><strong>{{ ucwords(str_replace('_', ' ', $key)) }}:</strong> {{ is_bool($value) ? ($value ? 'Yes' : 'No') : ($value ?? '-') }}</p>
+                <p>
+                    <strong>{{ $meta['summary_labels'][$key] ?? ucwords(str_replace('_', ' ', $key)) }}:</strong>
+                    {{ is_bool($value) ? ($value ? 'Yes' : 'No') : ($value ?? '-') }}
+                </p>
             @endforeach
         </div>
     @endif
