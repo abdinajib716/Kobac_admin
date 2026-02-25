@@ -87,6 +87,7 @@ class StockController extends BaseController
 
         $business = $this->business();
         $data = $validator->validated();
+        $resolvedBranchId = $data['branch_id'] ?? $this->branchId();
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('stock-images', 'public');
@@ -94,7 +95,7 @@ class StockController extends BaseController
 
         $stockItem = StockItem::create([
             'business_id' => $business->id,
-            'branch_id' => $data['branch_id'] ?? null,
+            'branch_id' => $resolvedBranchId,
             'name' => $data['name'],
             'sku' => $data['sku'] ?? null,
             'description' => $data['description'] ?? null,

@@ -115,8 +115,8 @@ Route::prefix('v1')->group(function () {
         // Dashboard
         Route::get('dashboard', [\App\Http\Controllers\Api\V1\DashboardController::class, 'index']);
         
-        // Activity
-        Route::get('activity', [\App\Http\Controllers\Api\V1\ActivityController::class, 'index']);
+        // Activity (branch-aware for business users, no-op for individual users)
+        Route::middleware('branch.context')->get('activity', [\App\Http\Controllers\Api\V1\ActivityController::class, 'index']);
         
         /*
         |--------------------------------------------------------------------------
