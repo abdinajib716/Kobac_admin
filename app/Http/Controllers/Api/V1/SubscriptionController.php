@@ -123,6 +123,7 @@ class SubscriptionController extends BaseController
                 'price' => (float) $subscription->plan->price,
                 'currency' => $subscription->plan->currency,
                 'billing_cycle' => $subscription->plan->billing_cycle,
+                'billing_days' => $subscription->plan->billing_days,
             ],
             'status' => $subscription->status,
             'status_label' => $subscription->status_label,
@@ -167,6 +168,7 @@ class SubscriptionController extends BaseController
                     'price' => (float) $plan->price,
                     'currency' => $plan->currency,
                     'billing_cycle' => $plan->billing_cycle,
+                    'billing_days' => $plan->billing_days,
                     'features' => $plan->features,
                 ];
             });

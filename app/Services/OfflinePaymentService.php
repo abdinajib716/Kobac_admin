@@ -16,11 +16,16 @@ class OfflinePaymentService
 {
     protected bool $isEnabled;
     protected ?string $instructions;
+    protected array $instructionChannels;
 
     public function __construct()
     {
         $this->isEnabled = (bool) Setting::get('offline_payment_enabled', false);
-        $this->instructions = Setting::get('offline_payment_instructions');
+        $rawInstructions = Setting::get('offline_payment_instructions');
+        $this->instructions = is_string($rawInstructions) ? trim($rawInstructions) : null;
+        $this->instructionChannels = $this->normalizeInstructionChannels(
+            Setting::get('offline_payment_channels', [])
+        );
     }
 
     public function isEnabled(): bool
@@ -30,7 +35,26 @@ class OfflinePaymentService
 
     public function getInstructions(): ?string
     {
+        return $this->formatInstructionsLegacy();
+    }
+
+    public function getInstructionsNote(): ?string
+    {
         return $this->instructions;
+    }
+
+    public function getInstructionChannels(): array
+    {
+        return $this->instructionChannels;
+    }
+
+    public function getInstructionsPayload(): array
+    {
+        return [
+            'note' => $this->getInstructionsNote(),
+            'channels' => $this->getInstructionChannels(),
+            'legacy_text' => $this->getInstructions(),
+        ];
     }
 
     /**
@@ -58,7 +82,9 @@ class OfflinePaymentService
                 'type' => 'offline',
                 'name' => 'Offline Payment',
                 'description' => 'Bank transfer, cash, or other manual payment methods',
-                'instructions' => $this->instructions,
+                'instructions' => $this->getInstructions(),
+                'instructions_note' => $this->getInstructionsNote(),
+                'instructions_channels' => $this->getInstructionChannels(),
                 'is_instant' => false,
                 'requires_approval' => true,
             ];
@@ -162,7 +188,7 @@ class OfflinePaymentService
                 'currency' => $plan->currency ?? 'USD',
                 'reference_id' => $referenceId,
                 'submitted_at' => now()->format('M d, Y h:i A'),
-                'instructions' => $this->instructions,
+                'instructions' => $this->getInstructions(),
             ]);
 
             return [
@@ -172,7 +198,9 @@ class OfflinePaymentService
                 'transaction_id' => $transaction->id,
                 'reference_id' => $referenceId,
                 'subscription_id' => $subscription->id,
-                'instructions' => $this->instructions,
+                'instructions' => $this->getInstructions(),
+                'instructions_note' => $this->getInstructionsNote(),
+                'instructions_channels' => $this->getInstructionChannels(),
                 'data' => [
                     'plan' => [
                         'id' => $plan->id,
@@ -456,5 +484,61 @@ class OfflinePaymentService
     public function calculateEndDateFromPlan(Plan $plan): Carbon
     {
         return $this->calculateEndDate($plan->billing_cycle, $plan->billing_days);
+    }
+
+    protected function normalizeInstructionChannels(mixed $channels): array
+    {
+        if (!is_array($channels)) {
+            return [];
+        }
+
+        return collect($channels)
+            ->map(function ($item) {
+                if (!is_array($item)) {
+                    return null;
+                }
+
+                $name = isset($item['name']) ? trim((string) $item['name']) : '';
+                $ussd = isset($item['ussd_code']) ? trim((string) $item['ussd_code']) : '';
+                $number = isset($item['number']) ? trim((string) $item['number']) : '';
+
+                if ($name === '' && $ussd === '' && $number === '') {
+                    return null;
+                }
+
+                return [
+                    'name' => $name,
+                    'ussd_code' => $ussd,
+                    'number' => $number,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    protected function formatInstructionsLegacy(): ?string
+    {
+        $lines = [];
+
+        if (!empty($this->instructions)) {
+            $lines[] = $this->instructions;
+        }
+
+        foreach ($this->instructionChannels as $channel) {
+            $parts = array_filter([
+                $channel['name'] ?? '',
+                $channel['ussd_code'] ?? '',
+                $channel['number'] ?? '',
+            ], fn ($value) => $value !== '');
+
+            if (!empty($parts)) {
+                $lines[] = implode(' | ', $parts);
+            }
+        }
+
+        $formatted = trim(implode("\n", $lines));
+
+        return $formatted !== '' ? $formatted : null;
     }
 }

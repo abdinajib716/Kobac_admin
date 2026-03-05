@@ -34,6 +34,7 @@ class PlanController extends BaseController
                     'price' => (float) $plan->price,
                     'currency' => $plan->currency,
                     'billing_cycle' => $plan->billing_cycle,
+                    'billing_days' => $plan->billing_days,
                     'trial_enabled' => $plan->trial_enabled,
                     'trial_days' => $plan->trial_days,
                     'features' => $plan->normalizedFeatures(),

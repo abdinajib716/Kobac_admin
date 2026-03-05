@@ -230,6 +230,7 @@ Route::prefix('v1')->group(function () {
             Route::middleware('feature.enabled:customers')->group(function () {
                 Route::get('customers', [\App\Http\Controllers\Api\V1\Business\CustomerController::class, 'index']);
                 Route::get('customers/{customer}', [\App\Http\Controllers\Api\V1\Business\CustomerController::class, 'show']);
+                Route::get('customers/{customer}/statement-pdf', [\App\Http\Controllers\Api\V1\Business\CustomerController::class, 'statementPdf']);
             });
             Route::middleware('feature.enabled:vendors')->group(function () {
                 Route::get('vendors', [\App\Http\Controllers\Api\V1\Business\VendorController::class, 'index']);

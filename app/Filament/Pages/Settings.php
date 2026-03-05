@@ -65,6 +65,11 @@ class Settings extends Page implements HasForms
             'waafipay_api_key' => Setting::get('waafipay_api_key'),
             'waafipay_merchant_no' => Setting::get('waafipay_merchant_no'),
             'waafipay_api_url' => Setting::get('waafipay_api_url', 'https://api.waafipay.net/asm'),
+            'offline_payment_enabled' => (bool) Setting::get('offline_payment_enabled', false),
+            'offline_payment_instructions' => Setting::get('offline_payment_instructions'),
+            'offline_payment_channels' => is_array(Setting::get('offline_payment_channels', []))
+                ? Setting::get('offline_payment_channels', [])
+                : [],
             // Firebase
             'firebase_enabled' => (bool) Setting::get('firebase_enabled', false),
             'firebase_project_id' => Setting::get('firebase_project_id'),
@@ -390,10 +395,34 @@ class Settings extends Page implements HasForms
                                             ->helperText('Allow users to request subscription via offline/manual payment (requires admin approval)')
                                             ->live(),
                                         Forms\Components\Textarea::make('offline_payment_instructions')
-                                            ->label('Payment Instructions')
+                                            ->label('Instruction Note')
                                             ->rows(4)
-                                            ->placeholder("Please transfer the payment to:\nBank: Premier Bank\nAccount: 1234567890\nName: Your Company Name\n\nAfter payment, your subscription will be activated within 24 hours.")
-                                            ->helperText('Instructions shown to users when they choose offline payment')
+                                            ->placeholder("Pay to one of the channels below, then submit payment proof. Your subscription will be activated after admin approval.")
+                                            ->helperText('Optional note shown above the channel list in mobile app')
+                                            ->visible(fn (Forms\Get $get): bool => $get('offline_payment_enabled')),
+                                        Forms\Components\Repeater::make('offline_payment_channels')
+                                            ->label('Payment Channels (Name / USSD / Number)')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('name')
+                                                    ->label('Name')
+                                                    ->required()
+                                                    ->maxLength(120)
+                                                    ->placeholder('EVC Plus'),
+                                                Forms\Components\TextInput::make('ussd_code')
+                                                    ->label('USSD Code')
+                                                    ->maxLength(20)
+                                                    ->placeholder('*770#'),
+                                                Forms\Components\TextInput::make('number')
+                                                    ->label('Number')
+                                                    ->required()
+                                                    ->maxLength(40)
+                                                    ->placeholder('616925555'),
+                                            ])
+                                            ->columns(3)
+                                            ->default([])
+                                            ->reorderable()
+                                            ->addActionLabel('Add Channel')
+                                            ->helperText('You can add unlimited channels. Mobile app will render these as a list.')
                                             ->visible(fn (Forms\Get $get): bool => $get('offline_payment_enabled')),
                                         Forms\Components\Placeholder::make('offline_info')
                                             ->label('How Offline Payment Works')

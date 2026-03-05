@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\V1\Business;
 
 use App\Http\Controllers\Api\V1\BaseController;
 use App\Models\Customer;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends BaseController
@@ -325,6 +328,115 @@ class CustomerController extends BaseController
                 'max_per_page' => 50,
             ],
         ]);
+    }
+
+    /**
+     * Export customer statement PDF
+     * GET /api/v1/business/customers/{customer}/statement-pdf
+     */
+    public function statementPdf(Request $request, Customer $customer): JsonResponse
+    {
+        $this->authorizeCustomer($customer);
+
+        $validator = Validator::make($request->all(), [
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Validation failed', 'VALIDATION_ERROR', 422, [
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $business = $this->business();
+        $currency = $business?->currency ?? 'USD';
+        $validated = $validator->validated();
+
+        $from = isset($validated['from']) ? Carbon::parse($validated['from'])->startOfDay() : null;
+        $to = isset($validated['to']) ? Carbon::parse($validated['to'])->endOfDay() : null;
+
+        $query = $customer->transactions()
+            ->with('createdBy:id,name')
+            ->orderBy('transaction_date')
+            ->orderBy('id');
+
+        if ($from) {
+            $query->whereDate('transaction_date', '>=', $from->toDateString());
+        }
+
+        if ($to) {
+            $query->whereDate('transaction_date', '<=', $to->toDateString());
+        }
+
+        $transactions = $query->get();
+
+        $openingBalance = 0.0;
+        if ($from) {
+            $openingBalance = (float) $customer->transactions()
+                ->whereDate('transaction_date', '<', $from->toDateString())
+                ->selectRaw('COALESCE(SUM(CASE WHEN type = "debit" THEN amount ELSE -amount END), 0) as opening_balance')
+                ->value('opening_balance');
+        }
+
+        $runningBalance = $openingBalance;
+        $rows = $transactions->map(function ($transaction) use (&$runningBalance) {
+            $amount = (float) $transaction->amount;
+            $isDebit = $transaction->type === 'debit';
+            $runningBalance += $isDebit ? $amount : -$amount;
+
+            return [
+                'date' => $transaction->transaction_date?->toDateString() ?? '-',
+                'description' => $transaction->description ?? ($isDebit ? 'Debit' : 'Credit'),
+                'debit' => $isDebit ? round($amount, 2) : 0.0,
+                'credit' => $isDebit ? 0.0 : round($amount, 2),
+                'balance' => round($runningBalance, 2),
+                'created_by' => $transaction->createdBy?->name ?? '-',
+            ];
+        })->values()->all();
+
+        $totalDebit = round((float) $transactions->where('type', 'debit')->sum('amount'), 2);
+        $totalCredit = round((float) $transactions->where('type', 'credit')->sum('amount'), 2);
+        $closingBalance = round((float) $runningBalance, 2);
+
+        $timestamp = now()->format('Ymd_His');
+        $filename = "customer_statement_{$customer->id}_{$timestamp}.pdf";
+        $path = "exports/{$business->id}/customer_statements/{$filename}";
+
+        $pdf = Pdf::loadView('exports.customer-statement', [
+            'business_name' => $business->name,
+            'currency' => $currency,
+            'customer' => $this->formatCustomer($customer),
+            'from' => $from?->toDateString(),
+            'to' => $to?->toDateString(),
+            'opening_balance' => round($openingBalance, 2),
+            'closing_balance' => $closingBalance,
+            'total_debit' => $totalDebit,
+            'total_credit' => $totalCredit,
+            'rows' => $rows,
+            'generated_at' => now()->toIso8601String(),
+        ])->setPaper('a4', 'portrait');
+
+        Storage::disk('public')->put($path, $pdf->output());
+
+        return $this->success([
+            'customer' => $this->formatCustomer($customer),
+            'file_name' => $filename,
+            'file_path' => $path,
+            'download_url' => asset('storage/' . $path),
+            'period' => [
+                'from' => $from?->toDateString(),
+                'to' => $to?->toDateString(),
+            ],
+            'summary' => [
+                'opening_balance' => round($openingBalance, 2),
+                'total_debit' => $totalDebit,
+                'total_credit' => $totalCredit,
+                'closing_balance' => $closingBalance,
+                'transactions_count' => $transactions->count(),
+            ],
+            'generated_at' => now()->toIso8601String(),
+        ], 'Customer statement PDF generated successfully');
     }
 
     private function authorizeCustomer(Customer $customer): void

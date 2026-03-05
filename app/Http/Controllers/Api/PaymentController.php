@@ -129,9 +129,15 @@ class PaymentController extends Controller
             ], 503);
         }
 
+        $instructions = $this->offlinePayment->getInstructionsPayload();
+
         return response()->json([
             'success' => true,
-            'instructions' => $this->offlinePayment->getInstructions(),
+            // Legacy field for backward compatibility with older Flutter builds.
+            'instructions' => $instructions['legacy_text'],
+            'instructions_note' => $instructions['note'],
+            'instructions_channels' => $instructions['channels'],
+            'instructions_payload' => $instructions,
         ]);
     }
 
