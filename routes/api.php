@@ -260,6 +260,10 @@ Route::prefix('v1')->group(function () {
             Route::post('register-token', [\App\Http\Controllers\Api\V1\NotificationController::class, 'registerToken']);
             Route::post('unregister-token', [\App\Http\Controllers\Api\V1\NotificationController::class, 'unregisterToken']);
             Route::get('history', [\App\Http\Controllers\Api\V1\NotificationController::class, 'history']);
+            Route::post('read-all', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead']);
+            Route::delete('delete-all', [\App\Http\Controllers\Api\V1\NotificationController::class, 'deleteAll']);
+            Route::delete('{notification}', [\App\Http\Controllers\Api\V1\NotificationController::class, 'destroy'])
+                ->whereNumber('notification');
         });
         
         /*

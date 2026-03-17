@@ -159,6 +159,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasMany(DeviceToken::class)->where('is_active', true);
     }
 
+    public function pushNotificationStates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PushNotificationUserState::class);
+    }
+
     public function isIndividual(): bool
     {
         return $this->user_type === self::TYPE_INDIVIDUAL;

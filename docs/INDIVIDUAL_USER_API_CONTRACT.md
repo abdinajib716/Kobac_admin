@@ -369,7 +369,29 @@ Success data:
 Success:
 
 - Paginated `data` rows:
-  - `{id, title, body, data, image_url, sent_at}`
+  - `{id, title, body, data, image_url, sent_at, is_read, read_at}`
+
+### `POST /api/v1/notifications/read-all`
+
+Success data:
+
+- `{read_count}` (number of notifications marked read for current user)
+
+### `DELETE /api/v1/notifications/{notification}`
+
+Success data:
+
+- `{deleted, notification_id}`
+
+Error:
+
+- `404` with `error_code = NOTIFICATION_NOT_FOUND` if notification is not visible to current user
+
+### `DELETE /api/v1/notifications/delete-all`
+
+Success data:
+
+- `{deleted_count}` (number of notifications deleted for current user)
 
 ## Payments
 

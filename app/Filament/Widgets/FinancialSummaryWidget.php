@@ -2,12 +2,9 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\IncomeTransaction;
-use App\Models\ExpenseTransaction;
-use App\Models\User;
+use App\Models\PaymentTransaction;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 
@@ -22,72 +19,74 @@ class FinancialSummaryWidget extends BaseWidget implements HasForms
 
     protected function getStats(): array
     {
-        $totalIncome = IncomeTransaction::sum('amount');
-        $totalExpense = ExpenseTransaction::sum('amount');
-        $netPosition = $totalIncome - $totalExpense;
-        
-        $monthlyIncome = IncomeTransaction::whereMonth('transaction_date', now()->month)
-            ->whereYear('transaction_date', now()->year)
-            ->sum('amount');
-            
-        $monthlyExpense = ExpenseTransaction::whereMonth('transaction_date', now()->month)
-            ->whereYear('transaction_date', now()->year)
+        $successfulStatuses = ['success', 'approved'];
+        $pendingStatuses = ['pending', 'processing', 'pending_approval'];
+        $failedStatuses = ['failed', 'rejected'];
+
+        $totalSubscriptionIncome = PaymentTransaction::whereIn('status', $successfulStatuses)
             ->sum('amount');
 
-        $individualUsers = User::individuals()->count();
-        $businessUsers = User::businessUsers()->count();
+        $totalSubscriptionTransactions = PaymentTransaction::whereIn('status', $successfulStatuses)
+            ->count();
+
+        $monthlySubscriptionIncome = PaymentTransaction::whereIn('status', $successfulStatuses)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('amount');
+
+        $monthlySubscriptionTransactions = PaymentTransaction::whereIn('status', $successfulStatuses)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        $pendingSubscriptionTransactions = PaymentTransaction::whereIn('status', $pendingStatuses)
+            ->count();
+
+        $failedSubscriptionTransactions = PaymentTransaction::whereIn('status', $failedStatuses)
+            ->count();
 
         return [
-            Stat::make('Total Income (All Time)', '$' . number_format($totalIncome, 2))
-                ->description('System-wide income')
+            Stat::make('Total Subscription Revenue (All Time)', '$' . number_format($totalSubscriptionIncome, 2))
+                ->description('Successful subscription payments')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success')
-                ->chart($this->getIncomeChart()),
+                ->chart($this->getSubscriptionIncomeChart()),
             
-            Stat::make('Total Expense (All Time)', '$' . number_format($totalExpense, 2))
-                ->description('System-wide expense')
-                ->descriptionIcon('heroicon-m-arrow-trending-down')
-                ->color('danger')
-                ->chart($this->getExpenseChart()),
+            Stat::make('Successful Subscription Transactions', $totalSubscriptionTransactions)
+                ->description('All-time successful transactions')
+                ->descriptionIcon('heroicon-m-check-badge')
+                ->color('info'),
             
-            Stat::make('Net Position', '$' . number_format($netPosition, 2))
-                ->description($netPosition >= 0 ? 'Positive' : 'Negative')
-                ->descriptionIcon($netPosition >= 0 ? 'heroicon-m-arrow-up' : 'heroicon-m-arrow-down')
-                ->color($netPosition >= 0 ? 'success' : 'danger'),
+            Stat::make('This Month Subscription Revenue', '$' . number_format($monthlySubscriptionIncome, 2))
+                ->description(now()->format('F Y'))
+                ->descriptionIcon('heroicon-m-calendar')
+                ->color('success'),
             
-            Stat::make('This Month Income', '$' . number_format($monthlyIncome, 2))
+            Stat::make('This Month Subscription Transactions', $monthlySubscriptionTransactions)
                 ->description(now()->format('F Y'))
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color('info'),
             
-            Stat::make('Individual Users', $individualUsers)
-                ->description('FREE users')
-                ->descriptionIcon('heroicon-m-user')
-                ->color('success'),
+            Stat::make('Pending Subscription Transactions', $pendingSubscriptionTransactions)
+                ->description('Awaiting completion or approval')
+                ->descriptionIcon('heroicon-m-clock')
+                ->color('warning'),
             
-            Stat::make('Business Users', $businessUsers)
-                ->description('Subscription-based')
-                ->descriptionIcon('heroicon-m-building-office')
-                ->color('info'),
+            Stat::make('Failed/Rejected Transactions', $failedSubscriptionTransactions)
+                ->description('Need retry or review')
+                ->descriptionIcon('heroicon-m-x-circle')
+                ->color('danger'),
         ];
     }
 
-    protected function getIncomeChart(): array
+    protected function getSubscriptionIncomeChart(): array
     {
         $data = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
-            $data[] = IncomeTransaction::whereDate('transaction_date', $date)->sum('amount');
-        }
-        return $data;
-    }
-
-    protected function getExpenseChart(): array
-    {
-        $data = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $data[] = ExpenseTransaction::whereDate('transaction_date', $date)->sum('amount');
+            $data[] = PaymentTransaction::whereIn('status', ['success', 'approved'])
+                ->whereDate('created_at', $date)
+                ->sum('amount');
         }
         return $data;
     }
