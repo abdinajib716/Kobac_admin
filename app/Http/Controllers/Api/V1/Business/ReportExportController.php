@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\V1\BaseController;
 use App\Models\Customer;
 use App\Models\ExpenseTransaction;
 use App\Models\IncomeTransaction;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\Vendor;
@@ -28,7 +30,7 @@ class ReportExportController extends BaseController
     public function export(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'report' => 'required|string|in:stock,customers,vendors,profit_loss,activity',
+            'report' => 'required|string|in:stock,customers,vendors,profit_loss,activity,sales_items',
             'format' => 'required|string|in:pdf,xlsx',
             'from' => 'nullable|date',
             'to' => 'nullable|date',
@@ -69,6 +71,14 @@ class ReportExportController extends BaseController
                 $to
             ),
             'vendors' => $this->buildVendorsDataset(
+                $business->id,
+                $branchId,
+                $business->name,
+                $business->currency ?? 'USD',
+                $from,
+                $to
+            ),
+            'sales_items' => $this->buildSalesItemsDataset(
                 $business->id,
                 $branchId,
                 $business->name,
@@ -313,6 +323,97 @@ class ReportExportController extends BaseController
                     'period_total_debit' => __('mobile.reports.vendor_summary.period_total_debit') . " ({$currency})",
                     'period_from' => __('mobile.reports.from_date'),
                     'period_to' => __('mobile.reports.to_date'),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *  title: string,
+     *  columns: array<string,string>,
+     *  rows: array<int,array<string,mixed>>,
+     *  summary: array<string,mixed>,
+     *  meta: array<string,mixed>
+     * }
+     */
+    private function buildSalesItemsDataset(
+        int $businessId,
+        ?int $branchId,
+        string $businessName,
+        string $currency,
+        ?Carbon $from,
+        ?Carbon $to
+    ): array {
+        $fromDate = ($from ?? now()->startOfMonth())->toDateString();
+        $toDate = ($to ?? now()->endOfMonth())->toDateString();
+
+        $rows = SaleItem::query()
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->where('sales.business_id', $businessId)
+            ->where('sales.status', Sale::STATUS_COMPLETED)
+            ->when($branchId, fn ($query) => $query->where('sales.branch_id', $branchId))
+            ->whereDate('sales.sold_at', '>=', $fromDate)
+            ->whereDate('sales.sold_at', '<=', $toDate)
+            ->groupBy('sale_items.stock_item_id', 'sale_items.product_name_snapshot')
+            ->orderBy('sale_items.product_name_snapshot')
+            ->selectRaw('
+                sale_items.stock_item_id as stock_item_id,
+                sale_items.product_name_snapshot as product,
+                SUM(sale_items.quantity) as qty,
+                SUM(sale_items.line_total) as price,
+                SUM(sale_items.quantity * sale_items.cost_price_snapshot) as cost
+            ')
+            ->get()
+            ->map(function ($row) {
+                $price = round((float) $row->price, 2);
+                $cost = round((float) $row->cost, 2);
+
+                return [
+                    'product' => $row->product,
+                    'qty' => round((float) $row->qty, 2),
+                    'price' => $price,
+                    'cost' => $cost,
+                    'profit' => round($price - $cost, 2),
+                ];
+            })
+            ->values();
+
+        return [
+            'title' => 'Sales Items Report',
+            'columns' => [
+                'product' => 'Product',
+                'qty' => 'Qty',
+                'price' => "Price ({$currency})",
+                'cost' => "Cost ({$currency})",
+                'profit' => "Profit ({$currency})",
+            ],
+            'rows' => $rows->all(),
+            'summary' => [
+                'total_products' => $rows->count(),
+                'total_qty' => round((float) $rows->sum('qty'), 2),
+                'total_price' => round((float) $rows->sum('price'), 2),
+                'total_cost' => round((float) $rows->sum('cost'), 2),
+                'total_profit' => round((float) $rows->sum('profit'), 2),
+                'period_from' => $fromDate,
+                'period_to' => $toDate,
+            ],
+            'meta' => [
+                'report_key' => 'sales_items',
+                'branch_id' => $branchId,
+                'business_name' => $businessName,
+                'currency' => $currency,
+                'generated_label' => 'Generated at',
+                'generated_at_display' => now()->format('d/m/Y, H:i:s'),
+                'app_name' => __('mobile.app.name'),
+                'summary_labels' => [
+                    'total_products' => 'Total Products',
+                    'total_qty' => 'Total Qty',
+                    'total_price' => "Total Price ({$currency})",
+                    'total_cost' => "Total Cost ({$currency})",
+                    'total_profit' => "Total Profit ({$currency})",
+                    'period_from' => 'From Date',
+                    'period_to' => 'To Date',
                 ],
             ],
         ];

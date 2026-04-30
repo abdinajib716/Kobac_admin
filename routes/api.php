@@ -202,6 +202,12 @@ Route::prefix('v1')->group(function () {
                 Route::post('stock/{stock}/activate', [\App\Http\Controllers\Api\V1\Business\StockController::class, 'activate']);
                 Route::get('stock/{stock}/movements', [\App\Http\Controllers\Api\V1\Business\StockController::class, 'movements']);
             });
+
+            // Sales / POS - write operations
+            Route::middleware('feature.enabled:sales')->group(function () {
+                Route::post('sales/checkout', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'checkout']);
+                Route::post('sales/{sale}/void', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'void']);
+            });
             
             // Profit & Loss (Read-Only) - with feature guard
             Route::middleware('feature.enabled:profit_loss')->group(function () {
@@ -239,6 +245,20 @@ Route::prefix('v1')->group(function () {
             Route::middleware('feature.enabled:stock')->group(function () {
                 Route::get('stock', [\App\Http\Controllers\Api\V1\Business\StockController::class, 'index']);
                 Route::get('stock/{stock}', [\App\Http\Controllers\Api\V1\Business\StockController::class, 'show']);
+            });
+            Route::middleware('feature.enabled:sales')->group(function () {
+                Route::get('sales', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'index']);
+                Route::get('sales/products', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'products']);
+                Route::get('sales/customers', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'customers']);
+                Route::get('sales/history', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'history']);
+                Route::get('sales/reports/summary', [\App\Http\Controllers\Api\V1\Business\SalesReportController::class, 'summary']);
+                Route::get('sales/reports/trends', [\App\Http\Controllers\Api\V1\Business\SalesReportController::class, 'trends']);
+                Route::get('sales/reports/top-products', [\App\Http\Controllers\Api\V1\Business\SalesReportController::class, 'topProducts']);
+                Route::get('sales/reports/items', [\App\Http\Controllers\Api\V1\Business\SalesReportController::class, 'items']);
+                Route::get('sales/reports/items/export', [\App\Http\Controllers\Api\V1\Business\SalesReportController::class, 'export']);
+                Route::get('sales/{sale}/receipt-pdf', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'receiptPdf']);
+                Route::get('sales/{sale}/print-payload', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'printPayload']);
+                Route::get('sales/{sale}', [\App\Http\Controllers\Api\V1\Business\SalesController::class, 'show']);
             });
             Route::middleware('feature.enabled:profit_loss')->group(function () {
                 Route::get('profit-loss', [\App\Http\Controllers\Api\V1\Business\ProfitLossController::class, 'index']);

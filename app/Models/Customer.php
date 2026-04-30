@@ -52,6 +52,11 @@ class Customer extends Model
         return $this->hasMany(CustomerTransaction::class);
     }
 
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

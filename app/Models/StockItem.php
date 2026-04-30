@@ -58,6 +58,11 @@ class StockItem extends Model
         return $this->hasMany(StockMovement::class);
     }
 
+    public function saleItems(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

@@ -16,13 +16,17 @@ class StockMovement extends Model
         'quantity_after',
         'reason',
         'reference',
+        'source_type',
+        'source_id',
         'created_by',
+        'meta',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
         'quantity_before' => 'decimal:2',
         'quantity_after' => 'decimal:2',
+        'meta' => 'array',
     ];
 
     public function stockItem(): BelongsTo

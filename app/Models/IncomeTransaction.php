@@ -20,13 +20,17 @@ class IncomeTransaction extends Model
         'description',
         'category',
         'reference',
+        'source_type',
+        'source_id',
         'transaction_date',
         'created_by',
+        'meta',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'transaction_date' => 'date',
+        'meta' => 'array',
     ];
 
     public function getActivitylogOptions(): LogOptions

@@ -65,6 +65,12 @@ class AppController extends BaseController
             'route' => '/business/stock',
             'business_only' => true,
         ],
+        'sales' => [
+            'name' => 'Sales',
+            'icon' => 'shopping-cart',
+            'route' => '/business/sales',
+            'business_only' => true,
+        ],
         'profit_loss' => [
             'name' => 'Profit & Loss',
             'icon' => 'trending-up',

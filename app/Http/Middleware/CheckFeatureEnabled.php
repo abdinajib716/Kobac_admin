@@ -33,6 +33,7 @@ class CheckFeatureEnabled
             'customers',
             'vendors',
             'stock',
+            'sales',
             'profit_loss',
             'branches',
             'users',

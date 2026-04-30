@@ -76,6 +76,11 @@ class Business extends Model
         return $this->hasMany(StockItem::class);
     }
 
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
+
     public function incomeTransactions(): HasMany
     {
         return $this->hasMany(IncomeTransaction::class);

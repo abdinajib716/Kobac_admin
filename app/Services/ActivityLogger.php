@@ -97,6 +97,11 @@ class ActivityLogger
                 'deleted' => "Deleted account: {$name}",
                 default => "Account {$action}",
             },
+            'sale' => match($action) {
+                'created' => "Completed sale: {$name}",
+                'voided' => "Voided sale: {$name}",
+                default => "Sale {$action}",
+            },
             'branch' => match($action) {
                 'created' => "Created branch: {$name}",
                 'updated' => "Updated branch: {$name}",
@@ -143,5 +148,10 @@ class ActivityLogger
     public static function account(string $action, $subject, array $properties = []): ?Activity
     {
         return self::log('account', $action, $subject, $properties);
+    }
+
+    public static function sale(string $action, $subject, array $properties = []): ?Activity
+    {
+        return self::log('sale', $action, $subject, $properties);
     }
 }

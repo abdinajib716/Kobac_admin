@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Models\IncomeTransaction;
 use App\Models\ExpenseTransaction;
+use App\Models\Sale;
 use App\Models\StockMovement;
 use App\Models\VendorTransaction;
 use Illuminate\Http\Request;
@@ -148,6 +149,34 @@ class ActivityController extends BaseController
                     'stock_sku' => $movement->stockItem?->sku,
                     'timestamp' => $movement->created_at->toIso8601String(),
                     'date' => $movement->created_at->toDateString(),
+                ]);
+            }
+
+            $sales = Sale::query()
+                ->forBusiness($business->id, $branchId)
+                ->with(['customer:id,name', 'createdBy:id,name'])
+                ->latest('sold_at')
+                ->take(50)
+                ->get();
+
+            foreach ($sales as $sale) {
+                $activities->push([
+                    'id' => 'sale_' . $sale->id,
+                    'type' => $sale->status === Sale::STATUS_VOID ? 'sale_voided' : 'sale_completed',
+                    'description' => $sale->status === Sale::STATUS_VOID
+                        ? 'Sale voided'
+                        : 'Sale completed',
+                    'amount' => (float) $sale->total,
+                    'category' => 'sales',
+                    'account_name' => null,
+                    'account_id' => null,
+                    'reference' => $sale->sale_number,
+                    'created_by' => $sale->createdBy?->name,
+                    'customer_name' => $sale->customer?->name,
+                    'sale_type' => $sale->sale_type,
+                    'payment_status' => $sale->payment_status,
+                    'timestamp' => ($sale->sold_at ?? $sale->created_at)->toIso8601String(),
+                    'date' => ($sale->sold_at ?? $sale->created_at)->toDateString(),
                 ]);
             }
 

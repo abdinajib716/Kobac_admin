@@ -81,6 +81,7 @@ class Plan extends Model
             'customers',
             'vendors',
             'stock',
+            'sales',
             'multi_branch',
             'profit_loss',
             'dashboard',

@@ -149,6 +149,10 @@ class PlanResource extends Resource
                                     ->label('Stock Management')
                                     ->helperText('Track inventory items')
                                     ->default(true),
+                                Forms\Components\Toggle::make('features.sales')
+                                    ->label('Sales / POS')
+                                    ->helperText('Sales dashboard, POS, and reports')
+                                    ->default(true),
                                 Forms\Components\Toggle::make('features.branches')
                                     ->label('Multi-Branch')
                                     ->helperText('Multiple business locations')
